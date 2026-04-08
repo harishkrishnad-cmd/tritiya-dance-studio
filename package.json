@@ -9,8 +9,11 @@
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "build": "cd client && npm run build",
     "start": "cd server && npm start",
-    "render:build": "cd server && npm install && cd ../client && npm install && npm run build",
+    "render:build": "npm install --prefix server && npm install --prefix client && npm run build --prefix client",
     "render:start": "node server/index.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

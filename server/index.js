@@ -31,6 +31,6 @@ const { startCronJobs } = require('./services/reminderCron');
 startCronJobs();
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`\n🪷  Tritiya Dance Studio running on http://localhost:${PORT}\n`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n🪷  Tritiya Dance Studio running on port ${PORT}\n`);
 });
