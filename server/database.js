@@ -124,6 +124,19 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS website_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS website_gallery (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    src TEXT NOT NULL,
+    alt TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Run migrations for existing DBs (add new columns if missing)
@@ -156,5 +169,42 @@ const defaults = [
   ['whatsapp_enabled', 'false'],
 ];
 defaults.forEach(([k, v]) => upsert.run(k, v));
+
+// Website settings defaults
+const wupsert = db.prepare(`INSERT OR IGNORE INTO website_settings (key, value) VALUES (?, ?)`);
+const webDefaults = [
+  ['hero_title', 'Tritiya\nDance Studio'],
+  ['hero_subtitle', 'Bharatanatyam · Nagaram, Hyderabad'],
+  ['hero_tagline', 'Classical Indian Dance'],
+  ['hero_image', 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Bharatanatyam_poses.jpg/1200px-Bharatanatyam_poses.jpg'],
+  ['hero_cta1', 'Explore Programs'],
+  ['hero_cta2', 'Get in Touch'],
+  ['about_heading', 'Where ancient art\nfinds new voice.'],
+  ['about_text', 'Tritiya Dance Studio is a classical Bharatanatyam academy rooted in the heart of Nagaram, Hyderabad. Founded and led by Revathi Krishna, the studio is dedicated to preserving the grammar, grace, and devotion of this centuries-old art form.'],
+  ['about_text2', 'From young beginners discovering their first steps to advanced students preparing for arangetram, every student receives personalised, rigorous training that honours tradition while nurturing expression.'],
+  ['about_badge_name', 'Revathi Krishna'],
+  ['about_badge_title', 'Founder & Principal Instructor'],
+  ['about_photo', 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bharatanatyam_by_Amrita_Lahiri_%28104%29.jpg/800px-Bharatanatyam_by_Amrita_Lahiri_%28104%29.jpg'],
+  ['gallery_heading', 'The art, captured.'],
+  ['programs_heading', 'Every stage of the journey.'],
+  ['contact_heading', 'Begin your\njourney with us.'],
+  ['contact_text', 'Reach out to Revathi Krishna to learn more about our programs, schedule a demo class, or enroll your child.'],
+  ['contact_phone', '+91 93983 50275'],
+  ['contact_whatsapp', '919398350275'],
+  ['contact_address', 'Nagaram, Hyderabad — 500083'],
+  ['contact_hours', 'Mon – Sat · 09:30 AM onwards'],
+  ['quote_text', '"Dance is the hidden language of the soul."'],
+  ['quote_author', '— Martha Graham'],
+  ['quote_image', 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/A_Vibrant_Bharatanatyam_Group_Interpretation.jpg/1400px-A_Vibrant_Bharatanatyam_Group_Interpretation.jpg'],
+  ['program1_icon', '🌱'], ['program1_level', 'Beginner'], ['program1_title', 'Foundations'],
+  ['program1_desc', 'Introduction to Bharatanatyam — Adavus, basic footwork, posture, and the fundamentals of Nritta. Perfect for ages 5 and above.'],
+  ['program2_icon', '🌿'], ['program2_level', 'Intermediate'], ['program2_title', 'Classical Training'],
+  ['program2_desc', 'Deeper exploration of Abhinaya, Varnam, and Keertanam. Students develop expressional technique and rhythmic precision.'],
+  ['program3_icon', '🪷'], ['program3_level', 'Advanced'], ['program3_title', 'Advanced & Arangetram'],
+  ['program3_desc', 'Comprehensive preparation for the solo debut performance. Rigorous technique, repertoire building, and stage presence.'],
+  ['program4_icon', '🎭'], ['program4_level', 'All Levels'], ['program4_title', 'Kuchipudi'],
+  ['program4_desc', 'Classical Kuchipudi training alongside Bharatanatyam, exploring the expressive storytelling traditions of Andhra Pradesh.'],
+];
+webDefaults.forEach(([k, v]) => wupsert.run(k, v));
 
 module.exports = db;

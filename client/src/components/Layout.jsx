@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Music2, ClipboardCheck,
-  CreditCard, Settings, Menu, X, Upload, BookOpen
+  CreditCard, Settings, Menu, X, Upload, BookOpen, Globe
 } from 'lucide-react';
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/payments', label: 'Payments', icon: CreditCard },
   { to: '/lesson-planner', label: 'Lesson Planner', icon: BookOpen },
+  { to: '/website', label: 'Website Editor', icon: Globe },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];
 

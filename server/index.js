@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '50mb' }));
 
 // Auth (public)
 const { router: authRouter } = require('./routes/auth');
@@ -24,6 +24,9 @@ app.use('/api/settings',    authMiddleware, adminOnly, require('./routes/setting
 
 // Parent portal routes (auth required, but not admin-only)
 app.use('/api/parent',      authMiddleware, require('./routes/parent'));
+
+// Website CMS (public GET + admin POST/PUT/DELETE)
+app.use('/api/website',     require('./routes/website'));
 
 // Serve React build
 const clientBuild = path.join(__dirname, '../client/dist');

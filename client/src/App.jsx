@@ -11,6 +11,7 @@ import Import from './pages/Import';
 import LessonPlanner from './pages/LessonPlanner';
 import Login from './pages/Login';
 import Landing from './pages/Landing';
+import WebsiteEditor from './pages/WebsiteEditor';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import InstallPrompt from './components/InstallPrompt';
@@ -79,6 +80,7 @@ export default function App() {
           <Route path="/attendance" element={<Attendance />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/lesson-planner" element={<LessonPlanner />} />
+          <Route path="/website" element={<WebsiteEditor />} />
           <Route path="/settings" element={<Settings onNameChange={setSchoolName} />} />
           <Route path="/login" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
