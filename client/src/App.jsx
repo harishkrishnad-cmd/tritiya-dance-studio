@@ -10,6 +10,7 @@ import Settings from './pages/Settings';
 import Import from './pages/Import';
 import LessonPlanner from './pages/LessonPlanner';
 import Login from './pages/Login';
+import Landing from './pages/Landing';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import InstallPrompt from './components/InstallPrompt';
@@ -49,6 +50,11 @@ export default function App() {
   function handleAdminLogin(t) { setToken(t); }
   function handleLogout() { localStorage.removeItem('auth_token'); setToken(null); }
 
+  // Public landing page at "/"
+  if (location.pathname === '/') {
+    return <Landing />;
+  }
+
   // Parent portal lives at /parent
   if (location.pathname.startsWith('/parent')) {
     return (
@@ -59,14 +65,14 @@ export default function App() {
     );
   }
 
-  // Admin portal
+  // Admin login at /login
   if (!token || !isAdmin) return <Login onLogin={handleAdminLogin} />;
 
   return (
     <>
       <Layout schoolName={schoolName} onLogout={handleLogout}>
         <Routes>
-          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/students" element={<Students />} />
           <Route path="/import" element={<Import />} />
           <Route path="/classes" element={<Classes />} />
@@ -74,7 +80,8 @@ export default function App() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/lesson-planner" element={<LessonPlanner />} />
           <Route path="/settings" element={<Settings onNameChange={setSchoolName} />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Layout>
       <InstallPrompt />

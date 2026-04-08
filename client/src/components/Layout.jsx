@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard, exact: true },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { to: '/students', label: 'Students', icon: Users },
   { to: '/import', label: 'Import Students', icon: Upload },
   { to: '/classes', label: 'Classes', icon: Music2 },
