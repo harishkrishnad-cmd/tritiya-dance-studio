@@ -5,19 +5,25 @@ const path = require('path');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Auth (public)
 const { router: authRouter } = require('./routes/auth');
 app.use('/api/auth', authRouter);
 
-// Protected routes
-const auth = require('./middleware/auth');
-app.use('/api/students',  auth, require('./routes/students'));
-app.use('/api/classes',   auth, require('./routes/classes'));
-app.use('/api/attendance',auth, require('./routes/attendance'));
-app.use('/api/payments',  auth, require('./routes/payments'));
-app.use('/api/settings',  auth, require('./routes/settings'));
+// Middleware
+const { authMiddleware, adminOnly } = require('./middleware/auth');
+
+// Admin-only routes
+app.use('/api/students',    authMiddleware, require('./routes/students'));
+app.use('/api/classes',     authMiddleware, adminOnly, require('./routes/classes'));
+app.use('/api/attendance',  authMiddleware, adminOnly, require('./routes/attendance'));
+app.use('/api/payments',    authMiddleware, adminOnly, require('./routes/payments'));
+app.use('/api/lesson-plans',authMiddleware, require('./routes/lessonPlans'));
+app.use('/api/settings',    authMiddleware, adminOnly, require('./routes/settings'));
+
+// Parent portal routes (auth required, but not admin-only)
+app.use('/api/parent',      authMiddleware, require('./routes/parent'));
 
 // Serve React build
 const clientBuild = path.join(__dirname, '../client/dist');

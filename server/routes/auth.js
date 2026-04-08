@@ -1,40 +1,61 @@
 const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
+const db = require('../database');
 
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'rishujanu';
 const SECRET = process.env.JWT_SECRET || 'tritiya-dance-studio-secret-2024';
 
-// Simple signed token: base64(payload).signature
-function makeToken(username) {
-  const payload = Buffer.from(JSON.stringify({ username, ts: Date.now() })).toString('base64');
-  const sig = crypto.createHmac('sha256', SECRET).update(payload).digest('hex');
-  return `${payload}.${sig}`;
+function makeToken(payload) {
+  const encoded = Buffer.from(JSON.stringify({ ...payload, ts: Date.now() })).toString('base64');
+  const sig = crypto.createHmac('sha256', SECRET).update(encoded).digest('hex');
+  return `${encoded}.${sig}`;
 }
 
 function verifyToken(token) {
   try {
-    const [payload, sig] = token.split('.');
-    const expected = crypto.createHmac('sha256', SECRET).update(payload).digest('hex');
+    const [encoded, sig] = token.split('.');
+    const expected = crypto.createHmac('sha256', SECRET).update(encoded).digest('hex');
     if (sig !== expected) return null;
-    return JSON.parse(Buffer.from(payload, 'base64').toString());
+    return JSON.parse(Buffer.from(encoded, 'base64').toString());
   } catch { return null; }
 }
 
+function hashPin(pin) {
+  return crypto.createHash('sha256').update(pin + SECRET).digest('hex');
+}
+
+// Admin login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
   if (username === ADMIN_USER && password === ADMIN_PASS) {
-    return res.json({ token: makeToken(username), username });
+    return res.json({ token: makeToken({ username, role: 'admin' }), username, role: 'admin' });
   }
   res.status(401).json({ error: 'Invalid user ID or password' });
+});
+
+// Parent login
+router.post('/parent-login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+
+  const student = db.prepare('SELECT * FROM students WHERE parent_username = ? AND active = 1').get(username.trim());
+  if (!student) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const hashed = hashPin(password);
+  if (student.parent_password_hash !== hashed) return res.status(401).json({ error: 'Invalid credentials' });
+
+  const token = makeToken({ username, role: 'parent', student_id: student.id });
+  res.json({ token, username, role: 'parent', student_id: student.id, student_name: student.name });
 });
 
 router.get('/verify', (req, res) => {
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
-  if (!token || !verifyToken(token)) return res.status(401).json({ error: 'Unauthorized' });
-  res.json({ ok: true });
+  const data = token ? verifyToken(token) : null;
+  if (!data) return res.status(401).json({ error: 'Unauthorized' });
+  res.json({ ok: true, role: data.role, student_id: data.student_id });
 });
 
-module.exports = { router, verifyToken };
+module.exports = { router, verifyToken, hashPin };

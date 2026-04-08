@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const { sendWelcomeEmail } = require('../services/emailService');
+const { hashPin } = require('./auth');
 
 // List all students
 router.get('/', (req, res) => {
@@ -14,7 +15,7 @@ router.get('/', (req, res) => {
   res.json(db.prepare(query).all(...params));
 });
 
-// Get single student with class enrollments
+// Get single student with details
 router.get('/:id', (req, res) => {
   const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
   if (!student) return res.status(404).json({ error: 'Student not found' });
@@ -23,48 +24,108 @@ router.get('/:id', (req, res) => {
     FROM classes c JOIN student_classes sc ON sc.class_id = c.id
     WHERE sc.student_id = ? AND sc.active = 1
   `).all(req.params.id);
-  student.recentPayments = db.prepare(`
-    SELECT * FROM payments WHERE student_id = ? ORDER BY due_date DESC LIMIT 12
-  `).all(req.params.id);
+  student.recentPayments = db.prepare(`SELECT * FROM payments WHERE student_id = ? ORDER BY due_date DESC LIMIT 12`).all(req.params.id);
   student.attendanceSummary = db.prepare(`
-    SELECT
-      COUNT(*) as total,
-      SUM(CASE WHEN a.status = 'present' THEN 1 ELSE 0 END) as present,
-      SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) as absent,
-      SUM(CASE WHEN a.status = 'late' THEN 1 ELSE 0 END) as late
-    FROM attendance a
-    JOIN class_sessions cs ON cs.id = a.session_id
-    WHERE a.student_id = ?
+    SELECT COUNT(*) as total,
+      SUM(CASE WHEN a.status='present' THEN 1 ELSE 0 END) as present,
+      SUM(CASE WHEN a.status='absent' THEN 1 ELSE 0 END) as absent,
+      SUM(CASE WHEN a.status='late' THEN 1 ELSE 0 END) as late
+    FROM attendance a WHERE a.student_id = ?
   `).get(req.params.id);
   res.json(student);
 });
 
 // Create student
 router.post('/', async (req, res) => {
-  const { name, date_of_birth, level, enrollment_date, parent_name, parent_email, parent_phone, emergency_contact, address, monthly_fee, notes } = req.body;
+  const { name, date_of_birth, level, enrollment_date, parent_name, parent_email,
+    parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
-  const result = db.prepare(`
-    INSERT INTO students (name, date_of_birth, level, enrollment_date, parent_name, parent_email, parent_phone, emergency_contact, address, monthly_fee, notes)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(name, date_of_birth, level || 'Beginner', enrollment_date || new Date().toISOString().split('T')[0], parent_name, parent_email, parent_phone, emergency_contact, address, monthly_fee || 0, notes);
 
-  const student = db.prepare('SELECT * FROM students WHERE id = ?').get(result.lastInsertRowid);
+  // Auto-generate parent login if not provided
+  const username = parent_username || (name.toLowerCase().replace(/\s+/g, '.') + Math.floor(Math.random() * 100));
+  const password = parent_password || Math.random().toString(36).slice(-6).toUpperCase();
+  const passwordHash = hashPin(password);
 
-  // Send welcome email if email provided
-  if (parent_email) {
-    sendWelcomeEmail(student).catch(console.error);
+  try {
+    const result = db.prepare(`
+      INSERT INTO students (name, date_of_birth, level, enrollment_date, parent_name, parent_email,
+        parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password_hash, parent_pin)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(name, date_of_birth, level || 'Beginner',
+      enrollment_date || new Date().toISOString().split('T')[0],
+      parent_name, parent_email, parent_phone, emergency_contact, address,
+      monthly_fee || 0, notes, username, passwordHash, password);
+
+    const student = db.prepare('SELECT * FROM students WHERE id = ?').get(result.lastInsertRowid);
+    student._plain_password = password;
+    if (parent_email) sendWelcomeEmail(student, password).catch(console.error);
+    res.status(201).json(student);
+  } catch (err) {
+    if (err.message.includes('UNIQUE')) return res.status(400).json({ error: 'Username already taken, try another' });
+    res.status(500).json({ error: err.message });
   }
+});
 
-  res.status(201).json(student);
+// Bulk import from Excel (parsed on client, array of rows sent here)
+router.post('/bulk-import', async (req, res) => {
+  const { students } = req.body;
+  if (!Array.isArray(students) || students.length === 0)
+    return res.status(400).json({ error: 'No student data provided' });
+
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO students (name, date_of_birth, level, enrollment_date, parent_name, parent_email,
+      parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password_hash, parent_pin)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  const results = { created: 0, skipped: 0, errors: [] };
+  const insertMany = db.transaction((rows) => {
+    for (const s of rows) {
+      if (!s.name) { results.errors.push(`Row skipped: missing name`); continue; }
+      const username = (s.parent_username || s.name.toLowerCase().replace(/\s+/g, '.') + Math.floor(Math.random() * 900 + 100));
+      const password = s.parent_password || Math.random().toString(36).slice(-6).toUpperCase();
+      const passwordHash = hashPin(password);
+      try {
+        const r = insert.run(s.name, s.date_of_birth || null, s.level || 'Beginner',
+          s.enrollment_date || new Date().toISOString().split('T')[0],
+          s.parent_name || null, s.parent_email || null, s.parent_phone || null,
+          s.emergency_contact || null, s.address || null, parseFloat(s.monthly_fee) || 0,
+          s.notes || null, username, passwordHash, password);
+        if (r.changes > 0) {
+          results.created++;
+          if (s.parent_email) {
+            const student = db.prepare('SELECT * FROM students WHERE id = ?').get(r.lastInsertRowid);
+            sendWelcomeEmail(student, password).catch(() => {});
+          }
+        } else { results.skipped++; }
+      } catch (e) { results.skipped++; results.errors.push(`${s.name}: ${e.message}`); }
+    }
+  });
+  insertMany(students);
+  res.json(results);
 });
 
 // Update student
 router.put('/:id', (req, res) => {
-  const { name, date_of_birth, level, enrollment_date, parent_name, parent_email, parent_phone, emergency_contact, address, monthly_fee, notes, active } = req.body;
+  const { name, date_of_birth, level, enrollment_date, parent_name, parent_email,
+    parent_phone, emergency_contact, address, monthly_fee, notes, active, parent_username, parent_password } = req.body;
+
+  const current = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
+  if (!current) return res.status(404).json({ error: 'Not found' });
+
+  const passwordHash = parent_password ? hashPin(parent_password) : current.parent_password_hash;
+  const pin = parent_password || current.parent_pin;
+  const uname = parent_username || current.parent_username;
+
   db.prepare(`
-    UPDATE students SET name=?, date_of_birth=?, level=?, enrollment_date=?, parent_name=?, parent_email=?, parent_phone=?, emergency_contact=?, address=?, monthly_fee=?, notes=?, active=?
+    UPDATE students SET name=?, date_of_birth=?, level=?, enrollment_date=?, parent_name=?, parent_email=?,
+      parent_phone=?, emergency_contact=?, address=?, monthly_fee=?, notes=?, active=?,
+      parent_username=?, parent_password_hash=?, parent_pin=?
     WHERE id=?
-  `).run(name, date_of_birth, level, enrollment_date, parent_name, parent_email, parent_phone, emergency_contact, address, monthly_fee, notes, active !== undefined ? active : 1, req.params.id);
+  `).run(name, date_of_birth, level, enrollment_date, parent_name, parent_email,
+    parent_phone, emergency_contact, address, monthly_fee, notes, active !== undefined ? active : 1,
+    uname, passwordHash, pin, req.params.id);
+
   res.json(db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id));
 });
 
@@ -80,15 +141,27 @@ router.post('/:id/enroll', (req, res) => {
   try {
     db.prepare(`INSERT OR REPLACE INTO student_classes (student_id, class_id, active) VALUES (?, ?, 1)`).run(req.params.id, class_id);
     res.json({ success: true });
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
+  } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-// Unenroll from class
 router.delete('/:id/enroll/:classId', (req, res) => {
   db.prepare('UPDATE student_classes SET active = 0 WHERE student_id = ? AND class_id = ?').run(req.params.id, req.params.classId);
   res.json({ success: true });
+});
+
+// Get parent login credentials for a student
+router.get('/:id/credentials', (req, res) => {
+  const s = db.prepare('SELECT name, parent_name, parent_email, parent_username, parent_pin FROM students WHERE id = ?').get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'Not found' });
+  res.json(s);
+});
+
+// Reset parent password
+router.post('/:id/reset-password', (req, res) => {
+  const newPass = Math.random().toString(36).slice(-6).toUpperCase();
+  const hash = hashPin(newPass);
+  db.prepare('UPDATE students SET parent_password_hash=?, parent_pin=? WHERE id=?').run(hash, newPass, req.params.id);
+  res.json({ new_password: newPass });
 });
 
 module.exports = router;

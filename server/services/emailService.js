@@ -2,8 +2,8 @@ const nodemailer = require('nodemailer');
 const db = require('../database');
 
 function getSettings() {
-  const rows = db.prepare('SELECT key, value FROM settings').all();
-  return rows.reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {});
+  return db.prepare('SELECT key, value FROM settings').all()
+    .reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {});
 }
 
 function createTransporter(settings) {
@@ -11,30 +11,24 @@ function createTransporter(settings) {
     host: settings.smtp_host,
     port: parseInt(settings.smtp_port) || 587,
     secure: settings.smtp_secure === 'true',
-    auth: {
-      user: settings.smtp_user,
-      pass: settings.smtp_pass,
-    },
+    auth: { user: settings.smtp_user, pass: settings.smtp_pass },
   });
 }
 
 function logEmail(studentId, type, subject, recipientEmail, status, errorMessage = null) {
-  db.prepare(`
-    INSERT INTO email_logs (student_id, email_type, subject, recipient_email, status, error_message)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(studentId, type, subject, recipientEmail, status, errorMessage);
+  db.prepare(`INSERT INTO email_logs (student_id, email_type, subject, recipient_email, status, error_message) VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(studentId, type, subject, recipientEmail, status, errorMessage);
 }
 
 async function sendEmail(to, subject, html, studentId = null, emailType = 'general') {
   const settings = getSettings();
   if (!settings.smtp_user || !settings.smtp_pass) {
-    console.log('Email not configured. Skipping:', subject);
+    console.log('[Email] Not configured. Skipping:', subject);
     return { success: false, error: 'Email not configured' };
   }
   try {
     const transporter = createTransporter(settings);
-    const from = settings.email_from || settings.smtp_user;
-    await transporter.sendMail({ from, to, subject, html });
+    await transporter.sendMail({ from: settings.email_from || settings.smtp_user, to, subject, html });
     logEmail(studentId, emailType, subject, to, 'sent');
     return { success: true };
   } catch (err) {
@@ -43,153 +37,126 @@ async function sendEmail(to, subject, html, studentId = null, emailType = 'gener
   }
 }
 
-function baseTemplate(schoolName, content) {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+function base(schoolName, content) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  body { margin: 0; padding: 0; background: #f8f4f0; font-family: Georgia, serif; }
-  .wrapper { max-width: 600px; margin: 0 auto; background: #fff; }
-  .header { background: linear-gradient(135deg, #7c1c1c 0%, #c0392b 100%); padding: 30px 40px; text-align: center; }
-  .header h1 { color: #ffd700; margin: 0; font-size: 28px; letter-spacing: 2px; }
-  .header p { color: #fde8c8; margin: 5px 0 0; font-size: 13px; letter-spacing: 1px; }
-  .ornament { text-align: center; color: #c0392b; font-size: 22px; padding: 15px; background: #fff8f0; border-top: 2px solid #f0e0d0; border-bottom: 2px solid #f0e0d0; }
-  .body { padding: 35px 40px; }
-  .body p { color: #333; font-size: 15px; line-height: 1.7; margin: 0 0 15px; }
-  .info-box { background: #fff8f0; border-left: 4px solid #c0392b; padding: 15px 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
-  .info-box .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #888; }
-  .info-box .value { font-size: 20px; font-weight: bold; color: #c0392b; }
-  .button { display: inline-block; background: #c0392b; color: white; padding: 12px 30px; border-radius: 6px; text-decoration: none; font-size: 14px; margin: 15px 0; }
-  .footer { background: #1a1a1a; color: #888; text-align: center; padding: 20px 40px; font-size: 12px; }
-  .footer a { color: #ffd700; text-decoration: none; }
-  .divider { border: none; border-top: 1px solid #f0e0d0; margin: 20px 0; }
-</style>
-</head>
-<body>
-<div class="wrapper">
-  <div class="header">
-    <h1>🪷 ${schoolName}</h1>
-    <p>Classical Bharatanatyam Dance Studio</p>
-  </div>
-  <div class="ornament">❋ ❋ ❋</div>
-  <div class="body">${content}</div>
-  <div class="footer">
-    <p>${schoolName} &bull; Classical Bharatanatyam Dance Studio</p>
-    <p>This is an automated message. Please do not reply directly.</p>
-  </div>
-</div>
-</body>
-</html>`;
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;color:#1d1d1f}
+.wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,.08)}
+.head{background:#1c1c1e;padding:28px 32px;text-align:center}
+.head h1{color:#fff;font-size:20px;font-weight:600;letter-spacing:-.3px}
+.head p{color:rgba(255,255,255,.5);font-size:13px;margin-top:4px}
+.body{padding:32px}
+.body p{font-size:15px;line-height:1.6;color:#1d1d1f;margin-bottom:14px}
+.box{background:#f5f5f7;border-radius:12px;padding:16px 20px;margin:16px 0}
+.box .lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#86868b}
+.box .val{font-size:18px;font-weight:600;color:#1d1d1f;margin-top:2px}
+.box .val.blue{color:#0071e3}
+.box .val.green{color:#34c759}
+.box .val.red{color:#ff3b30}
+.cred{background:#f5f5f7;border-radius:12px;padding:20px;margin:16px 0;border:1px solid #e8e8ed}
+.cred-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e8e8ed}
+.cred-row:last-child{border-bottom:none}
+.cred-lbl{font-size:13px;color:#86868b}
+.cred-val{font-size:15px;font-weight:600;color:#1d1d1f;font-family:monospace;background:#fff;padding:4px 10px;border-radius:6px}
+.foot{background:#f5f5f7;padding:20px 32px;text-align:center;font-size:12px;color:#86868b;border-top:1px solid #e8e8ed}
+hr{border:none;border-top:1px solid #e8e8ed;margin:20px 0}
+</style></head><body>
+<div class="wrap">
+<div class="head"><h1>🪷 ${schoolName}</h1><p>Classical Bharatanatyam Dance Studio</p></div>
+<div class="body">${content}</div>
+<div class="foot">${schoolName} · Bharatanatyam Dance Studio<br>This is an automated message.</div>
+</div></body></html>`;
 }
 
-async function sendWelcomeEmail(student) {
+async function sendWelcomeEmail(student, plainPassword) {
   const settings = getSettings();
-  const schoolName = settings.school_name || 'Tritiya Dance Studio';
-  const subject = `Welcome to ${schoolName} - ${student.name}`;
-  const html = baseTemplate(schoolName, `
+  const s = settings.school_name || 'Tritiya Dance Studio';
+  const appUrl = settings.app_url || '';
+  const subject = `Welcome to ${s} – Login Details for ${student.name}`;
+  const html = base(s, `
     <p>Dear ${student.parent_name || 'Parent/Guardian'},</p>
-    <p>We are delighted to welcome <strong>${student.name}</strong> to <strong>${schoolName}</strong>! 🎊</p>
-    <p>Bharatanatyam is one of the oldest and most celebrated classical dance forms of India. We look forward to nurturing ${student.name}'s journey through this beautiful art form.</p>
-    <div class="info-box">
-      <div class="label">Student Name</div>
-      <div class="value" style="font-size:16px; color:#333;">${student.name}</div>
+    <p>Welcome to <strong>${s}</strong>! We're thrilled to have <strong>${student.name}</strong> join our Bharatanatyam family.</p>
+    <div class="box"><div class="lbl">Student</div><div class="val">${student.name}</div></div>
+    <div class="box"><div class="lbl">Level</div><div class="val">${student.level}</div></div>
+    <div class="box"><div class="lbl">Monthly Fee</div><div class="val blue">${settings.currency || '₹'}${student.monthly_fee}</div></div>
+    <hr>
+    <p><strong>Your Parent Portal Login</strong></p>
+    <p>Use these credentials to track attendance, fees and lesson plans:</p>
+    <div class="cred">
+      <div class="cred-row"><span class="cred-lbl">Username</span><span class="cred-val">${student.parent_username}</span></div>
+      <div class="cred-row"><span class="cred-lbl">Password</span><span class="cred-val">${plainPassword || student.parent_pin || '—'}</span></div>
+      ${appUrl ? `<div class="cred-row"><span class="cred-lbl">Portal URL</span><span class="cred-val">${appUrl}</span></div>` : ''}
     </div>
-    <div class="info-box">
-      <div class="label">Dance Level</div>
-      <div class="value" style="font-size:16px; color:#333;">${student.level}</div>
-    </div>
-    <div class="info-box">
-      <div class="label">Monthly Fee</div>
-      <div class="value">${settings.currency || '₹'}${student.monthly_fee}</div>
-    </div>
-    <hr class="divider">
-    <p>If you have any questions about classes, schedules, or fees, please feel free to contact us.</p>
-    <p>With warm regards,<br><strong>${schoolName}</strong></p>
+    <p style="font-size:13px;color:#86868b">Please keep these credentials safe. You can change your password after logging in.</p>
+    <p>With warm regards,<br><strong>${s}</strong></p>
   `);
   return sendEmail(student.parent_email, subject, html, student.id, 'welcome');
 }
 
 async function sendPaymentReminder(payment, student) {
   const settings = getSettings();
-  const schoolName = settings.school_name || 'Tritiya Dance Studio';
+  const s = settings.school_name || 'Tritiya Dance Studio';
   const currency = settings.currency || '₹';
   const isOverdue = new Date(payment.due_date) < new Date();
-  const subject = isOverdue
-    ? `⚠️ Payment Overdue - ${schoolName} (${student.name})`
-    : `Payment Due Reminder - ${schoolName} (${student.name})`;
-
-  const html = baseTemplate(schoolName, `
+  const subject = isOverdue ? `⚠️ Payment Overdue – ${s}` : `Payment Reminder – ${s}`;
+  const html = base(s, `
     <p>Dear ${student.parent_name || 'Parent/Guardian'},</p>
-    <p>${isOverdue
-      ? `This is a reminder that the fee payment for <strong>${student.name}</strong> is <strong style="color:#c0392b;">overdue</strong>.`
-      : `This is a friendly reminder that the fee payment for <strong>${student.name}</strong> is due.`
-    }</p>
-    <div class="info-box">
-      <div class="label">Student</div>
-      <div class="value" style="font-size:16px; color:#333;">${student.name}</div>
-    </div>
-    <div class="info-box">
-      <div class="label">Amount Due</div>
-      <div class="value">${currency}${payment.amount}</div>
-    </div>
-    <div class="info-box">
-      <div class="label">Due Date</div>
-      <div class="value" style="font-size:16px; color:${isOverdue ? '#c0392b' : '#333'};">${new Date(payment.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-    </div>
-    ${payment.description ? `<div class="info-box"><div class="label">Description</div><div class="value" style="font-size:14px;color:#555;">${payment.description}</div></div>` : ''}
-    <hr class="divider">
-    <p>Please make the payment at the earliest convenience. You can pay via cash, UPI, or bank transfer at the academy.</p>
-    ${payment.reminder_count > 0 ? `<p style="color:#888; font-size:13px;">Reminder #${payment.reminder_count + 1}</p>` : ''}
-    <p>With regards,<br><strong>${schoolName}</strong></p>
+    <p>${isOverdue ? `The fee payment for <strong>${student.name}</strong> is <strong style="color:#ff3b30">overdue</strong>.` : `This is a reminder that the fee payment for <strong>${student.name}</strong> is due.`}</p>
+    <div class="box"><div class="lbl">Student</div><div class="val">${student.name}</div></div>
+    <div class="box"><div class="lbl">Amount Due</div><div class="val ${isOverdue ? 'red' : 'blue'}">${currency}${payment.amount}</div></div>
+    <div class="box"><div class="lbl">Due Date</div><div class="val">${new Date(payment.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>
+    ${payment.description ? `<div class="box"><div class="lbl">Description</div><div class="val" style="font-size:15px">${payment.description}</div></div>` : ''}
+    <p>Please make the payment at your earliest convenience.</p>
+    ${payment.reminder_count > 0 ? `<p style="font-size:13px;color:#86868b">Reminder #${payment.reminder_count + 1}</p>` : ''}
+    <p>Regards,<br><strong>${s}</strong></p>
   `);
-
   const result = await sendEmail(student.parent_email, subject, html, student.id, 'payment_reminder');
-  if (result.success) {
-    db.prepare(`UPDATE payments SET reminder_count = reminder_count + 1, last_reminder_sent = datetime('now') WHERE id = ?`).run(payment.id);
-  }
+  if (result.success) db.prepare(`UPDATE payments SET reminder_count=reminder_count+1, last_reminder_sent=datetime('now') WHERE id=?`).run(payment.id);
   return result;
 }
 
 async function sendScheduleReminder(student, classInfo, sessionDate) {
   const settings = getSettings();
-  const schoolName = settings.school_name || 'Tritiya Dance Studio';
-  const subject = `Class Tomorrow - ${classInfo.name} | ${schoolName}`;
+  const s = settings.school_name || 'Tritiya Dance Studio';
   const dateStr = new Date(sessionDate).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
-  const html = baseTemplate(schoolName, `
+  const subject = `Class Tomorrow – ${classInfo.name} | ${s}`;
+  const html = base(s, `
     <p>Dear ${student.parent_name || 'Parent/Guardian'},</p>
-    <p>This is a friendly reminder about <strong>${student.name}'s</strong> upcoming Bharatanatyam class.</p>
-    <div class="info-box">
-      <div class="label">Class</div>
-      <div class="value" style="font-size:16px;color:#333;">${classInfo.name}</div>
-    </div>
-    <div class="info-box">
-      <div class="label">Date</div>
-      <div class="value" style="font-size:16px;color:#333;">${dateStr}</div>
-    </div>
-    <div class="info-box">
-      <div class="label">Time</div>
-      <div class="value" style="font-size:16px;color:#333;">${classInfo.start_time} – ${classInfo.end_time}</div>
-    </div>
-    <hr class="divider">
-    <p>Please ensure ${student.name} arrives 5–10 minutes early and is dressed in dance attire.</p>
-    <p>With regards,<br><strong>${schoolName}</strong></p>
+    <p>A reminder about <strong>${student.name}'s</strong> upcoming class.</p>
+    <div class="box"><div class="lbl">Class</div><div class="val">${classInfo.name}</div></div>
+    <div class="box"><div class="lbl">Date</div><div class="val">${dateStr}</div></div>
+    <div class="box"><div class="lbl">Time</div><div class="val">${classInfo.start_time} – ${classInfo.end_time}</div></div>
+    <p>Please ensure ${student.name} arrives 5–10 minutes early in dance attire.</p>
+    <p>Regards,<br><strong>${s}</strong></p>
   `);
   return sendEmail(student.parent_email, subject, html, student.id, 'schedule_reminder');
 }
 
-async function sendTestEmail(toEmail) {
-  const settings = getSettings();
-  const schoolName = settings.school_name || 'Tritiya Dance Studio';
-  const subject = `Test Email - ${schoolName}`;
-  const html = baseTemplate(schoolName, `
-    <p>Hello!</p>
-    <p>This is a test email from <strong>${schoolName}</strong>. If you received this, your email configuration is working correctly! 🎉</p>
-    <p>You can now use automated email reminders for payments and class schedules.</p>
+async function sendLessonPlanEmail(student, plan, settings) {
+  const s = settings.school_name || 'Tritiya Dance Studio';
+  const dateStr = new Date(plan.plan_date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const subject = `Lesson Plan: ${plan.subject} – ${dateStr} | ${s}`;
+  const html = base(s, `
+    <p>Dear ${student.parent_name || 'Parent/Guardian'},</p>
+    <p>Here is the lesson plan for <strong>${student.name}'s</strong> upcoming class.</p>
+    <div class="box"><div class="lbl">Date</div><div class="val">${dateStr}</div></div>
+    <div class="box"><div class="lbl">Subject</div><div class="val blue">${plan.subject}</div></div>
+    ${plan.topic ? `<div class="box"><div class="lbl">Topic</div><div class="val" style="font-size:15px">${plan.topic}</div></div>` : ''}
+    ${plan.description ? `<div class="box"><div class="lbl">Details</div><div class="val" style="font-size:15px">${plan.description}</div></div>` : ''}
+    ${plan.homework ? `<div class="box"><div class="lbl">Practice / Homework</div><div class="val" style="font-size:15px;color:#ff9500">${plan.homework}</div></div>` : ''}
+    <div class="box"><div class="lbl">Class Time</div><div class="val">${plan.start_time} – ${plan.end_time}</div></div>
+    <p>Please help ${student.name} prepare for this session.</p>
+    <p>Regards,<br><strong>${s}</strong></p>
   `);
-  return sendEmail(toEmail, subject, html, null, 'test');
+  return sendEmail(student.parent_email, subject, html, student.id, 'lesson_plan');
 }
 
-module.exports = { sendEmail, sendWelcomeEmail, sendPaymentReminder, sendScheduleReminder, sendTestEmail };
+async function sendTestEmail(toEmail) {
+  const settings = getSettings();
+  const s = settings.school_name || 'Tritiya Dance Studio';
+  const html = base(s, `<p>Hello!</p><p>This is a test email from <strong>${s}</strong>. Your email configuration is working correctly! ✅</p>`);
+  return sendEmail(toEmail, `Test Email – ${s}`, html, null, 'test');
+}
+
+module.exports = { sendEmail, sendWelcomeEmail, sendPaymentReminder, sendScheduleReminder, sendLessonPlanEmail, sendTestEmail };

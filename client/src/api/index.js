@@ -12,43 +12,42 @@ async function request(method, path, body) {
   };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(BASE + path, opts);
-  if (res.status === 401) {
-    localStorage.removeItem('auth_token');
-    window.location.reload();
-    return;
-  }
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || 'Request failed');
-  }
+  if (res.status === 401) { localStorage.removeItem('auth_token'); window.location.reload(); return; }
+  if (!res.ok) { const err = await res.json().catch(() => ({ error: res.statusText })); throw new Error(err.error || 'Request failed'); }
   return res.json();
 }
 
 export const api = {
-  getStudents: (params = {}) => request('GET', '/students?' + new URLSearchParams(params)),
+  // Students
+  getStudents: (p = {}) => request('GET', '/students?' + new URLSearchParams(p)),
   getStudent: (id) => request('GET', `/students/${id}`),
   createStudent: (data) => request('POST', '/students', data),
   updateStudent: (id, data) => request('PUT', `/students/${id}`, data),
   deleteStudent: (id) => request('DELETE', `/students/${id}`),
-  enrollStudent: (studentId, classId) => request('POST', `/students/${studentId}/enroll`, { class_id: classId }),
-  unenrollStudent: (studentId, classId) => request('DELETE', `/students/${studentId}/enroll/${classId}`),
+  enrollStudent: (sid, cid) => request('POST', `/students/${sid}/enroll`, { class_id: cid }),
+  unenrollStudent: (sid, cid) => request('DELETE', `/students/${sid}/enroll/${cid}`),
+  bulkImportStudents: (students) => request('POST', '/students/bulk-import', { students }),
+  getStudentCredentials: (id) => request('GET', `/students/${id}/credentials`),
+  resetParentPassword: (id) => request('POST', `/students/${id}/reset-password`),
 
+  // Classes
   getClasses: () => request('GET', '/classes'),
   getClass: (id) => request('GET', `/classes/${id}`),
   createClass: (data) => request('POST', '/classes', data),
   updateClass: (id, data) => request('PUT', `/classes/${id}`, data),
   deleteClass: (id) => request('DELETE', `/classes/${id}`),
-  addStudentToClass: (classId, studentId) => request('POST', `/classes/${classId}/students`, { student_id: studentId }),
-  removeStudentFromClass: (classId, studentId) => request('DELETE', `/classes/${classId}/students/${studentId}`),
-  getAvailableStudents: (classId) => request('GET', `/classes/${classId}/available-students`),
+  addStudentToClass: (cid, sid) => request('POST', `/classes/${cid}/students`, { student_id: sid }),
+  removeStudentFromClass: (cid, sid) => request('DELETE', `/classes/${cid}/students/${sid}`),
+  getAvailableStudents: (cid) => request('GET', `/classes/${cid}/available-students`),
 
-  getSessions: (params = {}) => request('GET', '/attendance/sessions?' + new URLSearchParams(params)),
+  // Attendance
+  getSessions: (p = {}) => request('GET', '/attendance/sessions?' + new URLSearchParams(p)),
   getSession: (id) => request('GET', `/attendance/sessions/${id}`),
   createSession: (data) => request('POST', '/attendance/sessions', data),
-  markAttendance: (sessionId, attendance) => request('POST', `/attendance/sessions/${sessionId}/mark`, { attendance }),
-  getStudentAttendance: (studentId) => request('GET', `/attendance/student/${studentId}`),
+  markAttendance: (sid, att) => request('POST', `/attendance/sessions/${sid}/mark`, { attendance: att }),
 
-  getPayments: (params = {}) => request('GET', '/payments?' + new URLSearchParams(params)),
+  // Payments
+  getPayments: (p = {}) => request('GET', '/payments?' + new URLSearchParams(p)),
   getPaymentStats: () => request('GET', '/payments/stats'),
   createPayment: (data) => request('POST', '/payments', data),
   updatePayment: (id, data) => request('PUT', `/payments/${id}`, data),
@@ -57,8 +56,26 @@ export const api = {
   sendReminder: (id) => request('POST', `/payments/${id}/remind`),
   bulkMonthlyFees: (data) => request('POST', '/payments/bulk/monthly', data),
 
+  // Lesson Plans
+  getLessonPlans: (p = {}) => request('GET', '/lesson-plans?' + new URLSearchParams(p)),
+  getLessonPlan: (id) => request('GET', `/lesson-plans/${id}`),
+  createLessonPlan: (data) => request('POST', '/lesson-plans', data),
+  updateLessonPlan: (id, data) => request('PUT', `/lesson-plans/${id}`, data),
+  deleteLessonPlan: (id) => request('DELETE', `/lesson-plans/${id}`),
+  notifyLessonPlan: (id) => request('POST', `/lesson-plans/${id}/notify`),
+  getStudentPlans: (sid) => request('GET', `/lesson-plans/student/${sid}`),
+
+  // Settings
   getSettings: () => request('GET', '/settings'),
   saveSettings: (data) => request('POST', '/settings', data),
   testEmail: (email) => request('POST', '/settings/test-email', { email }),
+  testWhatsApp: (phone) => request('POST', '/settings/test-whatsapp', { phone }),
   getEmailLogs: () => request('GET', '/settings/email-logs'),
+  getWhatsAppLogs: () => request('GET', '/settings/whatsapp-logs'),
+
+  // Parent portal
+  getParentStudent: (sid) => request('GET', `/parent/student/${sid}`),
+  getParentAttendance: (sid) => request('GET', `/parent/student/${sid}/attendance`),
+  getParentPayments: (sid) => request('GET', `/parent/student/${sid}/payments`),
+  getParentPlans: (sid) => request('GET', `/parent/student/${sid}/plans`),
 };

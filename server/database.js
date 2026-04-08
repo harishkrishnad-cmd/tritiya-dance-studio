@@ -22,6 +22,9 @@ db.exec(`
     monthly_fee REAL DEFAULT 0,
     notes TEXT,
     active INTEGER DEFAULT 1,
+    parent_username TEXT UNIQUE,
+    parent_password_hash TEXT,
+    parent_pin TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   );
 
@@ -79,6 +82,33 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS lesson_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
+    plan_date TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    topic TEXT,
+    description TEXT,
+    homework TEXT,
+    duration_minutes INTEGER DEFAULT 90,
+    status TEXT DEFAULT 'planned',
+    whatsapp_sent INTEGER DEFAULT 0,
+    whatsapp_sent_at TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS whatsapp_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES students(id),
+    lesson_plan_id INTEGER REFERENCES lesson_plans(id),
+    phone TEXT,
+    message TEXT,
+    status TEXT DEFAULT 'sent',
+    error_message TEXT,
+    sent_via TEXT DEFAULT 'twilio',
+    sent_at TEXT DEFAULT (datetime('now'))
+  );
+
   CREATE TABLE IF NOT EXISTS email_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     student_id INTEGER REFERENCES students(id),
@@ -96,8 +126,13 @@ db.exec(`
   );
 `);
 
-// Insert default settings
-const insertSetting = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
+// Run migrations for existing DBs (add new columns if missing)
+const cols = db.prepare("PRAGMA table_info(students)").all().map(c => c.name);
+if (!cols.includes('parent_username')) db.exec("ALTER TABLE students ADD COLUMN parent_username TEXT");
+if (!cols.includes('parent_password_hash')) db.exec("ALTER TABLE students ADD COLUMN parent_password_hash TEXT");
+if (!cols.includes('parent_pin')) db.exec("ALTER TABLE students ADD COLUMN parent_pin TEXT");
+
+const upsert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
 const defaults = [
   ['school_name', 'Tritiya Dance Studio'],
   ['school_phone', ''],
@@ -115,7 +150,11 @@ const defaults = [
   ['schedule_reminder_hours_before', '12'],
   ['currency', '₹'],
   ['payment_due_day', '1'],
+  ['twilio_account_sid', ''],
+  ['twilio_auth_token', ''],
+  ['twilio_whatsapp_from', 'whatsapp:+14155238886'],
+  ['whatsapp_enabled', 'false'],
 ];
-defaults.forEach(([k, v]) => insertSetting.run(k, v));
+defaults.forEach(([k, v]) => upsert.run(k, v));
 
 module.exports = db;

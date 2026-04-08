@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Mail, Send, School, Bell, CheckCircle, XCircle } from 'lucide-react';
+import { Save, Mail, Send, School, Bell, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
 import { api } from '../api';
 
 function Section({ title, icon: Icon, children }) {
@@ -22,6 +22,11 @@ export default function Settings({ onNameChange }) {
   const [testLoading,setTestLoading]=useState(false);
   const [logs,setLogs]=useState([]);
   const [logsLoaded,setLogsLoaded]=useState(false);
+  const [testPhone,setTestPhone]=useState('');
+  const [waResult,setWaResult]=useState(null);
+  const [waLoading,setWaLoading]=useState(false);
+  const [waLogs,setWaLogs]=useState([]);
+  const [waLogsLoaded,setWaLogsLoaded]=useState(false);
 
   useEffect(()=>{ api.getSettings().then(d=>{ setS(d); setTestEmail(d.smtp_user||''); }); },[]);
   function set(key,val){ setS(v=>({...v,[key]:val})); setSaved(false); }
@@ -34,6 +39,10 @@ export default function Settings({ onNameChange }) {
   async function handleTest() {
     if(!testEmail) return alert('Enter an email'); setTestLoading(true); setTestResult(null);
     const r=await api.testEmail(testEmail); setTestResult(r); setTestLoading(false);
+  }
+  async function handleWaTest() {
+    if(!testPhone) return alert('Enter a phone number'); setWaLoading(true); setWaResult(null);
+    const r=await api.testWhatsApp(testPhone); setWaResult(r); setWaLoading(false);
   }
 
   return (
@@ -90,6 +99,38 @@ export default function Settings({ onNameChange }) {
         </div>
       </Section>
 
+      <Section title="WhatsApp Notifications" icon={MessageSquare}>
+        <p className="text-xs text-apple-gray-5">Uses <strong>Twilio WhatsApp API</strong>. Set up at <span className="font-mono">twilio.com</span> — use the WhatsApp Sandbox for testing.</p>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3 bg-apple-gray rounded-apple-sm p-3">
+            <input type="checkbox" id="wa_en" checked={s.whatsapp_enabled==='true'} onChange={e=>set('whatsapp_enabled',e.target.checked?'true':'false')} className="mt-0.5 w-4 h-4 accent-apple-blue"/>
+            <label htmlFor="wa_en" className="text-sm font-medium text-apple-text cursor-pointer">Enable WhatsApp notifications</label>
+          </div>
+          {s.whatsapp_enabled==='true'&&(
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div><label className="label">Twilio Account SID</label><input className="input font-mono text-sm" value={s.twilio_account_sid||''} onChange={e=>set('twilio_account_sid',e.target.value)} placeholder="ACxxxxxxxxxxxxxxxx"/></div>
+                <div><label className="label">Auth Token</label><input type="password" className="input" value={s.twilio_auth_token||''} onChange={e=>set('twilio_auth_token',e.target.value)} placeholder="Auth token"/></div>
+              </div>
+              <div><label className="label">WhatsApp From Number</label><input className="input" value={s.twilio_whatsapp_from||''} onChange={e=>set('twilio_whatsapp_from',e.target.value)} placeholder="+14155238886 (Twilio sandbox number)"/></div>
+              <div className="pt-2 border-t border-apple-gray-2 space-y-2">
+                <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide">Test Connection</p>
+                <div className="flex gap-2">
+                  <input type="tel" className="input flex-1" value={testPhone} onChange={e=>setTestPhone(e.target.value)} placeholder="+91 XXXXXXXXXX"/>
+                  <button onClick={handleWaTest} disabled={waLoading} className="btn-secondary flex items-center gap-1.5 whitespace-nowrap text-sm"><Send size={13}/>{waLoading?'Sending…':'Send Test'}</button>
+                </div>
+                {waResult&&(
+                  <div className={`flex items-center gap-1.5 text-sm ${waResult.success?'text-apple-green':'text-apple-red'}`}>
+                    {waResult.success?<CheckCircle size={14}/>:<XCircle size={14}/>}
+                    {waResult.success?'WhatsApp sent!':'Failed: '+waResult.error}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </Section>
+
       <Section title="Automated Reminders" icon={Bell}>
         <div className="space-y-3">
           <div className="flex items-start gap-3 bg-apple-gray rounded-apple-sm p-3">
@@ -133,6 +174,30 @@ export default function Settings({ onNameChange }) {
                     <td className="px-3 py-2 text-apple-gray-5">{new Date(l.sent_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
                     <td className="px-3 py-2 text-apple-gray-5 capitalize">{(l.email_type||'').replace(/_/g,' ')}</td>
                     <td className="px-3 py-2 text-apple-gray-5 truncate max-w-[160px]">{l.student_name||'—'}</td>
+                    <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded-full font-medium ${l.status==='sent'?'bg-green-50 text-apple-green':'bg-red-50 text-apple-red'}`}>{l.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Section>
+
+      <Section title="WhatsApp Logs" icon={MessageSquare}>
+        {!waLogsLoaded ? (
+          <button onClick={async()=>{ setWaLogs(await api.getWhatsAppLogs()); setWaLogsLoaded(true); }} className="btn-secondary text-sm">Load Logs</button>
+        ) : waLogs.length===0 ? <p className="text-sm text-apple-gray-4">No WhatsApp messages sent yet</p> : (
+          <div className="overflow-hidden rounded-apple-sm border border-apple-gray-2">
+            <table className="w-full text-xs">
+              <thead><tr className="bg-apple-gray border-b border-apple-gray-2">
+                {['Time','Recipient','Phone','Status'].map(h=><th key={h} className="text-left px-3 py-2 text-apple-gray-5 font-semibold uppercase tracking-wide text-[10px]">{h}</th>)}
+              </tr></thead>
+              <tbody className="divide-y divide-apple-gray-2/60">
+                {waLogs.map(l=>(
+                  <tr key={l.id} className="hover:bg-apple-gray/40">
+                    <td className="px-3 py-2 text-apple-gray-5">{new Date(l.sent_at).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</td>
+                    <td className="px-3 py-2 text-apple-gray-5">{l.student_name||'—'}</td>
+                    <td className="px-3 py-2 text-apple-gray-5 font-mono">{l.to_phone||'—'}</td>
                     <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded-full font-medium ${l.status==='sent'?'bg-green-50 text-apple-green':'bg-red-50 text-apple-red'}`}>{l.status}</span></td>
                   </tr>
                 ))}
