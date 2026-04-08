@@ -8,7 +8,9 @@
   },
   "scripts": {
     "start": "node server/index.js",
+    "render:start": "node server/index.js",
     "build": "cd client && npm install && npm run build",
+    "render:build": "cd client && npm install && npm run build",
     "dev": "concurrently \"nodemon server/index.js\" \"cd client && npm run dev\""
   },
   "dependencies": {
