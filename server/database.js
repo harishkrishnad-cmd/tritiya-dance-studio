@@ -245,6 +245,9 @@ if (!cols.includes('parent_username')) db.exec("ALTER TABLE students ADD COLUMN 
 if (!cols.includes('parent_password_hash')) db.exec("ALTER TABLE students ADD COLUMN parent_password_hash TEXT");
 if (!cols.includes('parent_pin')) db.exec("ALTER TABLE students ADD COLUMN parent_pin TEXT");
 if (!cols.includes('student_email')) db.exec("ALTER TABLE students ADD COLUMN student_email TEXT");
+if (!cols.includes('student_username')) db.exec("ALTER TABLE students ADD COLUMN student_username TEXT");
+if (!cols.includes('student_password_hash')) db.exec("ALTER TABLE students ADD COLUMN student_password_hash TEXT");
+if (!cols.includes('student_pin')) db.exec("ALTER TABLE students ADD COLUMN student_pin TEXT");
 
 const upsert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
 const defaults = [
@@ -270,6 +273,17 @@ const defaults = [
   ['whatsapp_enabled', 'false'],
 ];
 defaults.forEach(([k, v]) => upsert.run(k, v));
+
+// Pre-configure Gmail SMTP (only applies if value is currently empty)
+const setIfEmpty = db.prepare(`UPDATE settings SET value=? WHERE key=? AND (value='' OR value IS NULL)`);
+[
+  ['smtp_host',  'smtp.gmail.com'],
+  ['smtp_port',  '587'],
+  ['smtp_secure','false'],
+  ['smtp_user',  'tritiyadancestudio@gmail.com'],
+  ['smtp_pass',  'twuniawyazrrsrxt'],
+  ['email_from', 'Tritiya Dance Studio <tritiyadancestudio@gmail.com>'],
+].forEach(([k, v]) => setIfEmpty.run(v, k));
 
 // Website settings defaults
 const wupsert = db.prepare(`INSERT OR IGNORE INTO website_settings (key, value) VALUES (?, ?)`);

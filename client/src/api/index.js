@@ -29,6 +29,8 @@ export const api = {
   bulkImportStudents: (students) => request('POST', '/students/bulk-import', { students }),
   getStudentCredentials: (id) => request('GET', `/students/${id}/credentials`),
   resetParentPassword: (id) => request('POST', `/students/${id}/reset-password`),
+  getStudentPortalCredentials: (id) => request('GET', `/students/${id}/student-credentials`),
+  generateStudentCredentials: (id) => request('POST', `/students/${id}/student-credentials`),
 
   // Classes
   getClasses: () => request('GET', '/classes'),

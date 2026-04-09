@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserPlus, Search, Edit2, Trash2, Mail, Phone, ChevronDown, ChevronUp, BookOpen } from 'lucide-react';
+import { UserPlus, Search, Edit2, Trash2, Mail, Phone, ChevronDown, ChevronUp, BookOpen, Copy, RefreshCw, KeyRound } from 'lucide-react';
 import Modal from '../components/Modal';
 import { api } from '../api';
 
@@ -32,6 +32,83 @@ function StudentForm({ data, onChange }) {
         <div><label className="label">Student Email (for LMS login)</label><input type="email" className="input" value={data.student_email||''} onChange={e=>onChange('student_email',e.target.value)} placeholder="student@example.com" /></div>
       </div>
       <div><label className="label">Notes</label><textarea className="input" rows={2} value={data.notes} onChange={e=>onChange('notes',e.target.value)} placeholder="Any special notes…" /></div>
+    </div>
+  );
+}
+
+function StudentCredentials({ studentId }) {
+  const [creds, setCreds] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState('');
+
+  useEffect(() => { load(); }, [studentId]);
+
+  async function load() {
+    setLoading(true);
+    try { setCreds(await api.getStudentPortalCredentials(studentId)); } catch { setCreds(null); }
+    setLoading(false);
+  }
+
+  async function generate() {
+    setGenerating(true);
+    try { setCreds(await api.generateStudentCredentials(studentId)); } catch { alert('Failed to generate credentials'); }
+    setGenerating(false);
+  }
+
+  function copy(text, key) {
+    navigator.clipboard.writeText(text).then(() => { setCopied(key); setTimeout(() => setCopied(''), 1500); });
+  }
+
+  if (loading) return <p className="text-xs text-apple-gray-4">Loading…</p>;
+
+  const hasCredentials = creds?.student_username;
+
+  return (
+    <div>
+      <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-2 flex items-center gap-1"><KeyRound size={11}/>Student Portal</p>
+      {hasCredentials ? (
+        <div className="space-y-1.5">
+          <div className="bg-white rounded-apple-sm border border-apple-gray-2 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs text-apple-gray-4 mb-0.5">Username</p>
+                <p className="text-xs font-mono font-medium text-apple-text">{creds.student_username}</p>
+              </div>
+              <button onClick={() => copy(creds.student_username, 'user')}
+                className="p-1 hover:bg-apple-gray rounded text-apple-gray-5 flex-shrink-0">
+                {copied === 'user' ? <span className="text-apple-green text-xs">✓</span> : <Copy size={11}/>}
+              </button>
+            </div>
+          </div>
+          <div className="bg-white rounded-apple-sm border border-apple-gray-2 px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-xs text-apple-gray-4 mb-0.5">Password</p>
+                <p className="text-xs font-mono font-medium text-apple-text">{creds.student_pin || '••••••••'}</p>
+              </div>
+              {creds.student_pin && (
+                <button onClick={() => copy(creds.student_pin, 'pass')}
+                  className="p-1 hover:bg-apple-gray rounded text-apple-gray-5 flex-shrink-0">
+                  {copied === 'pass' ? <span className="text-apple-green text-xs">✓</span> : <Copy size={11}/>}
+                </button>
+              )}
+            </div>
+          </div>
+          <button onClick={generate} disabled={generating}
+            className="flex items-center gap-1 text-xs text-apple-gray-4 hover:text-apple-blue mt-1">
+            <RefreshCw size={10}/>{generating ? 'Resetting…' : 'Reset credentials'}
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p className="text-xs text-apple-gray-4 mb-2">No student login yet.</p>
+          <button onClick={generate} disabled={generating}
+            className="flex items-center gap-1.5 text-xs bg-apple-blue text-white px-3 py-1.5 rounded-apple-sm font-medium">
+            <KeyRound size={10}/>{generating ? 'Generating…' : 'Generate Credentials'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -75,7 +152,7 @@ function StudentRow({ student, onEdit, onDelete }) {
       {expanded && details && (
         <tr className="bg-apple-gray/40">
           <td colSpan={5} className="px-4 py-3">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-sm">
               <div>
                 <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-2 flex items-center gap-1"><BookOpen size={11}/>Classes</p>
                 {details.classes.length===0 ? <p className="text-apple-gray-4 text-xs">Not enrolled</p>
@@ -107,6 +184,9 @@ function StudentRow({ student, onEdit, onDelete }) {
                     <span className={`text-xs font-medium ${p.status==='paid'?'text-apple-green':'text-apple-red'}`}>₹{p.amount} · {p.status}</span>
                   </div>
                 ))}
+              </div>
+              <div>
+                <StudentCredentials studentId={student.id} />
               </div>
             </div>
           </td>

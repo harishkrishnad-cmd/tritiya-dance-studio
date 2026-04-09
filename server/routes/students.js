@@ -156,6 +156,38 @@ router.get('/:id/credentials', (req, res) => {
   res.json(s);
 });
 
+// Get student portal credentials
+router.get('/:id/student-credentials', (req, res) => {
+  const s = db.prepare('SELECT name, student_username, student_pin FROM students WHERE id = ?').get(req.params.id);
+  if (!s) return res.status(404).json({ error: 'Not found' });
+  res.json(s);
+});
+
+// Generate / reset student portal credentials
+router.post('/:id/student-credentials', (req, res) => {
+  const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
+  if (!student) return res.status(404).json({ error: 'Not found' });
+
+  // Build username: firstname.L + 3-digit number
+  const parts = student.name.trim().toLowerCase().split(/\s+/);
+  const base = parts[0] + (parts[1] ? '.' + parts[1][0] : '');
+  const num = Math.floor(Math.random() * 900 + 100);
+  const username = base.replace(/[^a-z.]/g, '') + num;
+
+  // Password: 4 uppercase consonants + 4 digits (easy to read/share)
+  const consonants = 'BCDFGHJKLMNPQRSTVWXYZ';
+  const digits = '23456789';
+  const password =
+    Array.from({ length: 4 }, () => consonants[Math.floor(Math.random() * consonants.length)]).join('') +
+    Array.from({ length: 4 }, () => digits[Math.floor(Math.random() * digits.length)]).join('');
+
+  const hash = hashPin(password);
+  db.prepare('UPDATE students SET student_username=?, student_password_hash=?, student_pin=? WHERE id=?')
+    .run(username, hash, password, req.params.id);
+
+  res.json({ username, password, student_name: student.name });
+});
+
 // Reset parent password
 router.post('/:id/reset-password', (req, res) => {
   const newPass = Math.random().toString(36).slice(-6).toUpperCase();

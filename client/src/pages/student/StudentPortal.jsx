@@ -3,32 +3,28 @@ import React, { useState, useEffect, useRef } from 'react';
 // ── TOKEN UTILS ───────────────────────────────────────────────
 function parseToken(t) { try { return JSON.parse(atob(t.split('.')[0])); } catch { return null; } }
 
-// ── OTP LOGIN PAGE ────────────────────────────────────────────
+// ── LOGIN PAGE (username + password) ─────────────────────────
 function StudentLogin({ onLogin }) {
-  const [step, setStep] = useState('email'); // email | otp
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [sent, setSent] = useState(false);
 
-  async function sendOTP() {
-    if (!email.trim()) return;
+  async function login() {
+    if (!username.trim() || !password.trim()) return;
     setLoading(true); setError('');
-    const res = await fetch('/api/otp/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim() }) });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error); setLoading(false); return; }
-    setSent(true); setStep('otp'); setLoading(false);
-  }
-
-  async function verifyOTP() {
-    if (!otp.trim()) return;
-    setLoading(true); setError('');
-    const res = await fetch('/api/otp/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.trim(), otp: otp.trim() }) });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error); setLoading(false); return; }
-    localStorage.setItem('student_token', data.token);
-    onLogin(data.token);
+    try {
+      const res = await fetch('/api/auth/student-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim().toLowerCase(), password: password.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Login failed'); setLoading(false); return; }
+      localStorage.setItem('student_token', data.token);
+      onLogin(data.token);
+    } catch { setError('Network error. Please try again.'); }
     setLoading(false);
   }
 
@@ -42,41 +38,43 @@ function StudentLogin({ onLogin }) {
         </div>
 
         <div style={{ background: '#fff', borderRadius: 18, padding: 28, boxShadow: '0 2px 20px rgba(0,0,0,0.08)' }}>
-          {step === 'email' ? (
-            <>
-              <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 16, lineHeight: 1.6 }}>Enter your registered email address. We'll send you a one-time login code.</p>
-              {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 12 }}>{error}</div>}
-              <input value={email} onChange={e => { setEmail(e.target.value); setError(''); }} type="email"
-                placeholder="student@example.com"
-                onKeyDown={e => e.key === 'Enter' && sendOTP()}
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 15, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7', marginBottom: 12 }} />
-              <button onClick={sendOTP} disabled={loading || !email.trim()}
-                style={{ width: '100%', padding: '13px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: loading || !email.trim() ? 0.6 : 1 }}>
-                {loading ? 'Sending…' : 'Send Login Code'}
-              </button>
-            </>
-          ) : (
-            <>
-              <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 4, lineHeight: 1.6 }}>Enter the 6-digit code sent to</p>
-              <p style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', marginBottom: 16 }}>{email}</p>
-              {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 12 }}>{error}</div>}
-              <input value={otp} onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }}
-                placeholder="000000"
-                onKeyDown={e => e.key === 'Enter' && verifyOTP()}
-                style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 28, fontWeight: 700, letterSpacing: '8px', textAlign: 'center', outline: 'none', boxSizing: 'border-box', background: '#f5f5f7', marginBottom: 12, fontFamily: 'monospace' }} />
-              <button onClick={verifyOTP} disabled={loading || otp.length < 6}
-                style={{ width: '100%', padding: '13px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: loading || otp.length < 6 ? 0.6 : 1, marginBottom: 10 }}>
-                {loading ? 'Verifying…' : 'Login'}
-              </button>
-              <button onClick={() => { setStep('email'); setOtp(''); setError(''); }}
-                style={{ width: '100%', padding: '10px', background: 'none', border: 'none', color: '#0071e3', fontSize: 13, cursor: 'pointer' }}>
-                ← Change email
-              </button>
-            </>
+          <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 20, lineHeight: 1.6 }}>
+            Sign in with the credentials given to you by your teacher.
+          </p>
+          {error && (
+            <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 14 }}>{error}</div>
           )}
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
+          <input
+            value={username}
+            onChange={e => { setUsername(e.target.value); setError(''); }}
+            placeholder="e.g. priya.s123"
+            onKeyDown={e => e.key === 'Enter' && login()}
+            style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 15, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7', marginBottom: 14, marginTop: 6 }}
+            autoCapitalize="none" autoCorrect="off" spellCheck="false"
+          />
+          <label style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Password</label>
+          <div style={{ position: 'relative', marginTop: 6, marginBottom: 20 }}>
+            <input
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError(''); }}
+              type={showPass ? 'text' : 'password'}
+              placeholder="Enter your password"
+              onKeyDown={e => e.key === 'Enter' && login()}
+              style={{ width: '100%', padding: '11px 44px 11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 15, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7' }}
+            />
+            <button onClick={() => setShowPass(v => !v)}
+              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#86868b', fontSize: 13 }}>
+              {showPass ? 'Hide' : 'Show'}
+            </button>
+          </div>
+          <button onClick={login} disabled={loading || !username.trim() || !password.trim()}
+            style={{ width: '100%', padding: '13px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: loading || !username.trim() || !password.trim() ? 0.6 : 1 }}>
+            {loading ? 'Signing in…' : 'Sign In'}
+          </button>
         </div>
         <p style={{ textAlign: 'center', fontSize: 12, color: '#86868b', marginTop: 20 }}>
-          Code expires in 10 minutes · Check spam folder if not received
+          Contact your teacher if you don't have login credentials.
         </p>
       </div>
     </div>

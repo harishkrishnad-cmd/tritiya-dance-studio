@@ -127,9 +127,9 @@ export default function Landing() {
               onMouseEnter={e => e.target.style.color='#f5f5f7'} onMouseLeave={e => e.target.style.color='rgba(245,245,247,0.75)'}>
               Parent Portal
             </a>
-            <a href="/login" style={{ fontSize: 13, fontWeight: 500, color: '#0a0a0a', background: '#f5f5f7', padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'opacity 0.2s' }}
+            <a href="/student" style={{ fontSize: 13, fontWeight: 500, color: '#0a0a0a', background: '#f5f5f7', padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'opacity 0.2s' }}
               onMouseEnter={e => e.target.style.opacity='0.85'} onMouseLeave={e => e.target.style.opacity='1'}>
-              Studio Portal
+              Student Portal
             </a>
           </div>
           <button onClick={() => setMenuOpen(v => !v)} className="mobile-menu-btn"
@@ -148,7 +148,7 @@ export default function Landing() {
               </button>
             ))}
             <a href="/parent" style={{ color: 'rgba(245,245,247,0.8)', fontSize: 17, textDecoration: 'none', padding: '10px 0' }}>Parent Portal</a>
-            <a href="/login" style={{ color: '#0a0a0a', background: '#f5f5f7', fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 8, display: 'inline-block', width: 'fit-content' }}>Studio Portal</a>
+            <a href="/student" style={{ color: '#0a0a0a', background: '#f5f5f7', fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 8, display: 'inline-block', width: 'fit-content' }}>Student Portal</a>
           </div>
         )}
       </nav>
