@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import { api } from '../api';
 
 const LEVELS = ['Beginner', 'Primary', 'Junior', 'Intermediate', 'Senior', 'Advanced'];
-const empty = { name:'', date_of_birth:'', level:'Beginner', enrollment_date:new Date().toISOString().split('T')[0], parent_name:'', parent_email:'', parent_phone:'', emergency_contact:'', address:'', monthly_fee:'', notes:'' };
+const empty = { name:'', date_of_birth:'', level:'Beginner', enrollment_date:new Date().toISOString().split('T')[0], parent_name:'', parent_email:'', parent_phone:'', emergency_contact:'', address:'', monthly_fee:'', notes:'', student_email:'' };
 
 function StudentForm({ data, onChange }) {
   return (
@@ -25,6 +25,11 @@ function StudentForm({ data, onChange }) {
           <div><label className="label">Emergency Contact</label><input type="tel" className="input" value={data.emergency_contact} onChange={e=>onChange('emergency_contact',e.target.value)} placeholder="Emergency phone" /></div>
           <div><label className="label">Address</label><input className="input" value={data.address} onChange={e=>onChange('address',e.target.value)} placeholder="Home address" /></div>
         </div>
+      </div>
+      <div className="border-t border-apple-gray-2 pt-4">
+        <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-1">Student Learning Portal</p>
+        <p className="text-xs text-apple-gray-4 mb-3">Student's own email for OTP login to the Learning Hub at <span className="font-mono text-apple-blue">/student</span></p>
+        <div><label className="label">Student Email (for LMS login)</label><input type="email" className="input" value={data.student_email||''} onChange={e=>onChange('student_email',e.target.value)} placeholder="student@example.com" /></div>
       </div>
       <div><label className="label">Notes</label><textarea className="input" rows={2} value={data.notes} onChange={e=>onChange('notes',e.target.value)} placeholder="Any special notes…" /></div>
     </div>

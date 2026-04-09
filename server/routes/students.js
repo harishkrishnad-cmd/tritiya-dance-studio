@@ -38,7 +38,7 @@ router.get('/:id', (req, res) => {
 // Create student
 router.post('/', async (req, res) => {
   const { name, date_of_birth, level, enrollment_date, parent_name, parent_email,
-    parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password } = req.body;
+    parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password, student_email } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   // Auto-generate parent login if not provided
@@ -49,12 +49,12 @@ router.post('/', async (req, res) => {
   try {
     const result = db.prepare(`
       INSERT INTO students (name, date_of_birth, level, enrollment_date, parent_name, parent_email,
-        parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password_hash, parent_pin)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password_hash, parent_pin, student_email)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(name, date_of_birth, level || 'Beginner',
       enrollment_date || new Date().toISOString().split('T')[0],
       parent_name, parent_email, parent_phone, emergency_contact, address,
-      monthly_fee || 0, notes, username, passwordHash, password);
+      monthly_fee || 0, notes, username, passwordHash, password, student_email ? student_email.trim().toLowerCase() : null);
 
     const student = db.prepare('SELECT * FROM students WHERE id = ?').get(result.lastInsertRowid);
     student._plain_password = password;

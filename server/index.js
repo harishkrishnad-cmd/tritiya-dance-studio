@@ -28,6 +28,12 @@ app.use('/api/parent',      authMiddleware, require('./routes/parent'));
 // Website CMS (public GET + admin POST/PUT/DELETE)
 app.use('/api/website',     require('./routes/website'));
 
+// OTP email login (public)
+app.use('/api/otp',         require('./routes/otp'));
+
+// LMS (courses, quizzes, progress)
+app.use('/api/lms',         authMiddleware, require('./routes/lms'));
+
 // Serve React build
 const clientBuild = path.join(__dirname, '../client/dist');
 app.use(express.static(clientBuild));

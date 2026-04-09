@@ -61,6 +61,18 @@ router.post('/gallery', authMiddleware, adminOnly, (req, res) => {
   }
 });
 
+// ── Admin: reorder gallery (MUST be before /:id) ─────────────
+router.put('/gallery/reorder', authMiddleware, adminOnly, (req, res) => {
+  try {
+    const { order } = req.body;
+    if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be array' });
+    const update = db.prepare('UPDATE website_gallery SET sort_order = ? WHERE id = ?');
+    const tx = db.transaction((ids) => { ids.forEach((id, i) => update.run(i, id)); });
+    tx(order);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // ── Admin: update gallery image alt text ─────────────────────
 router.put('/gallery/:id', authMiddleware, adminOnly, (req, res) => {
   try {
@@ -82,20 +94,5 @@ router.delete('/gallery/:id', authMiddleware, adminOnly, (req, res) => {
   }
 });
 
-// ── Admin: reorder gallery (send array of ids in new order) ──
-router.put('/gallery/reorder', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const { order } = req.body; // [id1, id2, id3, ...]
-    if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be array' });
-    const update = db.prepare('UPDATE website_gallery SET sort_order = ? WHERE id = ?');
-    const tx = db.transaction((ids) => {
-      ids.forEach((id, i) => update.run(i, id));
-    });
-    tx(order);
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 module.exports = router;

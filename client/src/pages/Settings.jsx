@@ -69,14 +69,24 @@ export default function Settings({ onNameChange }) {
         </div>
       </Section>
 
-      <Section title="Email Configuration" icon={Mail}>
-        <p className="text-xs text-apple-gray-5">Use Gmail App Passwords — Google Account → Security → App Passwords.</p>
+      <Section title="Email Configuration (Gmail Setup)" icon={Mail}>
+        {/* Gmail step-by-step guide */}
+        <div className="bg-blue-50 border border-blue-100 rounded-apple-sm p-4 space-y-2">
+          <p className="text-xs font-semibold text-apple-blue uppercase tracking-wide">📧 How to set up Gmail in 3 steps</p>
+          <ol className="text-xs text-apple-gray-5 space-y-1.5 list-decimal list-inside">
+            <li>Go to <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="text-apple-blue underline">myaccount.google.com/security</a> → Enable <strong>2-Step Verification</strong></li>
+            <li>On that same page, scroll to <strong>"App passwords"</strong> → Select app: <em>Mail</em> → Generate → Copy the 16-character password</li>
+            <li>Paste it below as <strong>App Password</strong> · Use your Gmail address as Username</li>
+          </ol>
+          <p className="text-xs text-apple-gray-4 mt-1">⚠️ Use the 16-char App Password — your regular Gmail password will NOT work.</p>
+        </div>
+        <p className="text-xs text-apple-gray-5">Pre-filled with Gmail defaults. Just enter your Gmail + App Password below.</p>
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label className="label">SMTP Host</label><input className="input" value={s.smtp_host||''} onChange={e=>set('smtp_host',e.target.value)} placeholder="smtp.gmail.com"/></div>
+            <div><label className="label">SMTP Host</label><input className="input" value={s.smtp_host||'smtp.gmail.com'} onChange={e=>set('smtp_host',e.target.value)} placeholder="smtp.gmail.com"/></div>
             <div><label className="label">SMTP Port</label><input type="number" className="input" value={s.smtp_port||'587'} onChange={e=>set('smtp_port',e.target.value)}/></div>
-            <div><label className="label">Username</label><input type="email" className="input" value={s.smtp_user||''} onChange={e=>set('smtp_user',e.target.value)} placeholder="your@gmail.com"/></div>
-            <div><label className="label">App Password</label><input type="password" className="input" value={s.smtp_pass||''} onChange={e=>set('smtp_pass',e.target.value)} placeholder="App password"/></div>
+            <div><label className="label">Your Gmail Address</label><input type="email" className="input" value={s.smtp_user||''} onChange={e=>{set('smtp_user',e.target.value);if(!s.email_from)set('email_from',`Tritiya Dance Studio <${e.target.value}>`);}} placeholder="yourname@gmail.com"/></div>
+            <div><label className="label">App Password (16 chars)</label><input type="password" className="input font-mono" value={s.smtp_pass||''} onChange={e=>set('smtp_pass',e.target.value)} placeholder="xxxx xxxx xxxx xxxx"/></div>
           </div>
           <div><label className="label">From Name & Email</label><input className="input" value={s.email_from||''} onChange={e=>set('email_from',e.target.value)} placeholder="Tritiya Dance Studio <your@gmail.com>"/></div>
           <div className="flex items-center gap-2">

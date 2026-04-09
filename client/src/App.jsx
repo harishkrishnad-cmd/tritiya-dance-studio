@@ -12,6 +12,8 @@ import LessonPlanner from './pages/LessonPlanner';
 import Login from './pages/Login';
 import Landing from './pages/Landing';
 import WebsiteEditor from './pages/WebsiteEditor';
+import LMSAdmin from './pages/LMSAdmin';
+import StudentPortal from './pages/student/StudentPortal';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import InstallPrompt from './components/InstallPrompt';
@@ -56,6 +58,11 @@ export default function App() {
     return <Landing />;
   }
 
+  // Student learning portal at /student
+  if (location.pathname.startsWith('/student')) {
+    return <StudentPortal />;
+  }
+
   // Parent portal lives at /parent
   if (location.pathname.startsWith('/parent')) {
     return (
@@ -81,6 +88,7 @@ export default function App() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/lesson-planner" element={<LessonPlanner />} />
           <Route path="/website" element={<WebsiteEditor />} />
+          <Route path="/lms" element={<LMSAdmin />} />
           <Route path="/settings" element={<Settings onNameChange={setSchoolName} />} />
           <Route path="/login" element={<Navigate to="/dashboard" replace />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

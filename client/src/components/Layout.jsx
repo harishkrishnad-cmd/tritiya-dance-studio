@@ -13,6 +13,7 @@ const navItems = [
   { to: '/attendance', label: 'Attendance', icon: ClipboardCheck },
   { to: '/payments', label: 'Payments', icon: CreditCard },
   { to: '/lesson-planner', label: 'Lesson Planner', icon: BookOpen },
+  { to: '/lms', label: 'Learning Hub', icon: BookOpen },
   { to: '/website', label: 'Website Editor', icon: Globe },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];

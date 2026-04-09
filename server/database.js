@@ -137,6 +137,106 @@ db.exec(`
     sort_order INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   );
+
+  -- OTP tokens for email-based login
+  CREATE TABLE IF NOT EXISTS otp_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    otp TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    used INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- Enrollment links sent to parents
+  CREATE TABLE IF NOT EXISTS enrollment_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    token TEXT UNIQUE NOT NULL,
+    used INTEGER DEFAULT 0,
+    expires_at TEXT NOT NULL,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- LMS: Courses
+  CREATE TABLE IF NOT EXISTS courses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    level TEXT DEFAULT 'All',
+    thumbnail TEXT,
+    active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- LMS: Materials per course
+  CREATE TABLE IF NOT EXISTS course_materials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    type TEXT DEFAULT 'link',
+    content TEXT,
+    duration_minutes INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- LMS: Quizzes per course
+  CREATE TABLE IF NOT EXISTS quizzes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    course_id INTEGER REFERENCES courses(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    pass_score INTEGER DEFAULT 70,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- LMS: Quiz questions
+  CREATE TABLE IF NOT EXISTS quiz_questions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    quiz_id INTEGER REFERENCES quizzes(id) ON DELETE CASCADE,
+    question TEXT NOT NULL,
+    options TEXT NOT NULL,
+    correct_index INTEGER NOT NULL,
+    sort_order INTEGER DEFAULT 0
+  );
+
+  -- LMS: Student material completion
+  CREATE TABLE IF NOT EXISTS student_progress (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    material_id INTEGER REFERENCES course_materials(id) ON DELETE CASCADE,
+    completed_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(student_id, material_id)
+  );
+
+  -- LMS: Quiz attempts
+  CREATE TABLE IF NOT EXISTS quiz_attempts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    quiz_id INTEGER REFERENCES quizzes(id) ON DELETE CASCADE,
+    score INTEGER NOT NULL,
+    passed INTEGER DEFAULT 0,
+    answers TEXT,
+    attempted_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- LMS: Badges earned
+  CREATE TABLE IF NOT EXISTS student_badges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    badge_type TEXT NOT NULL,
+    badge_data TEXT,
+    earned_at TEXT DEFAULT (datetime('now'))
+  );
+
+  -- LMS: Points log
+  CREATE TABLE IF NOT EXISTS student_points (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    student_id INTEGER REFERENCES students(id) ON DELETE CASCADE,
+    points INTEGER NOT NULL,
+    reason TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 // Run migrations for existing DBs (add new columns if missing)
@@ -144,6 +244,7 @@ const cols = db.prepare("PRAGMA table_info(students)").all().map(c => c.name);
 if (!cols.includes('parent_username')) db.exec("ALTER TABLE students ADD COLUMN parent_username TEXT");
 if (!cols.includes('parent_password_hash')) db.exec("ALTER TABLE students ADD COLUMN parent_password_hash TEXT");
 if (!cols.includes('parent_pin')) db.exec("ALTER TABLE students ADD COLUMN parent_pin TEXT");
+if (!cols.includes('student_email')) db.exec("ALTER TABLE students ADD COLUMN student_email TEXT");
 
 const upsert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
 const defaults = [
