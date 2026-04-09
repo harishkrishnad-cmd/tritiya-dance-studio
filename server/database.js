@@ -299,14 +299,7 @@ const defaults = [
 ];
 defaults.forEach(([k, v]) => upsert.run(k, v));
 
-// Ensure smtp_host and email metadata are set correctly
-const smtpMeta = db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`);
-smtpMeta.run('smtp_host', 'smtp.gmail.com');
-smtpMeta.run('smtp_port', '587');
-smtpMeta.run('smtp_secure', 'false');
-smtpMeta.run('email_from', 'Tritiya Dance Studio <tritiyadancestudio@gmail.com>');
-// Only set smtp_user if empty
-db.prepare(`UPDATE settings SET value=? WHERE key=? AND (value='' OR value IS NULL)`).run('tritiyadancestudio@gmail.com', 'smtp_user');
+// NOTE: Do NOT force-override smtp settings here — admin configures them via Settings UI.
 
 // Website settings defaults
 const wupsert = db.prepare(`INSERT OR IGNORE INTO website_settings (key, value) VALUES (?, ?)`);

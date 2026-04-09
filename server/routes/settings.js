@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const nodemailer = require('nodemailer');
 const db = require('../database');
 const { sendTestEmail } = require('../services/emailService');
 const { sendWhatsApp } = require('../services/whatsappService');
@@ -28,6 +29,49 @@ router.post('/test-email', async (req, res) => {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email required' });
   res.json(await sendTestEmail(email));
+});
+
+// Ethereal quick-test — no credentials needed, proves email template renders
+router.post('/test-ethereal', async (req, res) => {
+  try {
+    const testAccount = await nodemailer.createTestAccount();
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.ethereal.email',
+      port: 587,
+      secure: false,
+      auth: { user: testAccount.user, pass: testAccount.pass },
+    });
+    const settings = db.prepare('SELECT key, value FROM settings').all().reduce((a,{key,value})=>({...a,[key]:value}),{});
+    const schoolName = settings.school_name || 'Tritiya Dance Studio';
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+*{margin:0;padding:0;box-sizing:border-box}body{background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',Arial,sans-serif;color:#1d1d1f}
+.wrap{max-width:560px;margin:32px auto;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,.08)}
+.head{background:#1c1c1e;padding:28px 32px;text-align:center}.head h1{color:#fff;font-size:20px;font-weight:600}
+.head p{color:rgba(255,255,255,.5);font-size:13px;margin-top:4px}.body{padding:32px}
+.body p{font-size:15px;line-height:1.6;color:#1d1d1f;margin-bottom:14px}
+.ok{background:#f0fff4;border:1px solid #34c759;border-radius:12px;padding:16px 20px;margin:16px 0;text-align:center}
+.ok p{color:#1a7f37;font-size:16px;font-weight:600;margin:0}
+.foot{background:#f5f5f7;padding:20px 32px;text-align:center;font-size:12px;color:#86868b;border-top:1px solid #e8e8ed}
+</style></head><body><div class="wrap">
+<div class="head"><h1>🪷 ${schoolName}</h1><p>Email Configuration Test</p></div>
+<div class="body">
+<p>Hello!</p>
+<div class="ok"><p>✅ Email is working perfectly!</p></div>
+<p>This test email was sent from <strong>${schoolName}</strong>'s management system. If you can see this, your email configuration is set up correctly.</p>
+<p>You can now send welcome emails, payment reminders, and lesson plan notifications to parents.</p>
+</div>
+<div class="foot">${schoolName} · This is an automated test message.</div>
+</div></body></html>`;
+    const info = await transporter.sendMail({
+      from: `"${schoolName}" <${testAccount.user}>`,
+      to: testAccount.user,
+      subject: `✅ Email Test — ${schoolName}`,
+      html,
+    });
+    res.json({ success: true, previewUrl: nodemailer.getTestMessageUrl(info), messageId: info.messageId });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
 });
 
 router.post('/test-whatsapp', async (req, res) => {

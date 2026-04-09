@@ -31,8 +31,27 @@ export default function Settings({ onNameChange }) {
   const upiFileRef = useRef();
   const [smtpProvider, setSmtpProvider] = useState('');
   const [smtpHint, setSmtpHint] = useState('');
+  const [etherealLoading, setEtherealLoading] = useState(false);
+  const [etherealResult, setEtherealResult] = useState(null);
+  const [smtpPassSaved, setSmtpPassSaved] = useState(false);
 
-  useEffect(()=>{ api.getSettings().then(d=>{ setS(d); setTestEmail(d.smtp_user||''); }); },[]);
+  useEffect(()=>{
+    api.getSettings().then(d=>{
+      // If password comes back masked, note it's saved but don't fill the field
+      if (d.smtp_pass === '••••••••') { setSmtpPassSaved(true); d.smtp_pass = ''; }
+      setS(d); setTestEmail(d.smtp_user||'');
+    });
+  },[]);
+
+  async function handleEtherealTest() {
+    setEtherealLoading(true); setEtherealResult(null);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/settings/test-ethereal', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } });
+      setEtherealResult(await res.json());
+    } catch(e) { setEtherealResult({ success: false, error: e.message }); }
+    setEtherealLoading(false);
+  }
   function set(key,val){ setS(v=>({...v,[key]:val})); setSaved(false); }
 
   async function handleSave() {
@@ -107,7 +126,11 @@ export default function Settings({ onNameChange }) {
             <div><label className="label">SMTP Host</label><input className="input" value={s.smtp_host||'smtp.gmail.com'} onChange={e=>set('smtp_host',e.target.value)} placeholder="smtp.gmail.com"/></div>
             <div><label className="label">SMTP Port</label><input type="number" className="input" value={s.smtp_port||'587'} onChange={e=>set('smtp_port',e.target.value)}/></div>
             <div><label className="label">Username / Email</label><input type="email" className="input" value={s.smtp_user||''} onChange={e=>{set('smtp_user',e.target.value);if(!s.email_from)set('email_from',`Tritiya Dance Studio <${e.target.value}>`);}} placeholder="yourname@example.com"/></div>
-            <div><label className="label">Password / API Key</label><input type="password" className="input font-mono" value={s.smtp_pass||''} onChange={e=>set('smtp_pass',e.target.value)} placeholder="Password or API key"/></div>
+            <div>
+              <label className="label">Password / API Key</label>
+              <input type="password" className="input font-mono" value={s.smtp_pass||''} onChange={e=>{ set('smtp_pass',e.target.value); setSmtpPassSaved(false); }} placeholder={smtpPassSaved ? '••••••••  (saved — type to change)' : 'Password or API key'}/>
+              {smtpPassSaved && !s.smtp_pass && <p className="text-xs text-apple-green mt-1">✓ Password is saved. Leave blank to keep it, or type to replace.</p>}
+            </div>
           </div>
           <div><label className="label">From Name & Email</label><input className="input" value={s.email_from||''} onChange={e=>set('email_from',e.target.value)} placeholder="Tritiya Dance Studio <your@gmail.com>"/></div>
           <div className="flex items-center gap-2">
@@ -115,18 +138,41 @@ export default function Settings({ onNameChange }) {
             <label htmlFor="ssl" className="text-sm text-apple-text">Use SSL/TLS (port 465)</label>
           </div>
         </div>
-        <div className="pt-3 border-t border-apple-gray-2 space-y-2">
+        <div className="pt-3 border-t border-apple-gray-2 space-y-3">
           <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide">Test Connection</p>
-          <div className="flex gap-2">
-            <input type="email" className="input flex-1" value={testEmail} onChange={e=>setTestEmail(e.target.value)} placeholder="Send test to…"/>
-            <button onClick={handleTest} disabled={testLoading} className="btn-secondary flex items-center gap-1.5 whitespace-nowrap text-sm"><Send size={13}/>{testLoading?'Sending…':'Send Test'}</button>
+
+          {/* Ethereal quick-test (no credentials needed) */}
+          <div className="bg-apple-gray rounded-apple-sm p-3 space-y-2">
+            <p className="text-xs font-medium text-apple-text">🧪 Quick Test — No credentials needed</p>
+            <p className="text-xs text-apple-gray-5">Sends a test email via Ethereal (a safe dummy service). Click the preview link to see the rendered email. This confirms your email template works before configuring real SMTP.</p>
+            <button onClick={handleEtherealTest} disabled={etherealLoading} className="btn-secondary text-sm flex items-center gap-1.5">
+              <Send size={13}/>{etherealLoading ? 'Sending…' : 'Send Ethereal Test Email'}
+            </button>
+            {etherealResult && (
+              <div className={`text-sm ${etherealResult.success ? 'text-apple-green' : 'text-apple-red'}`}>
+                {etherealResult.success ? (
+                  <span>✅ Sent! <a href={etherealResult.previewUrl} target="_blank" rel="noreferrer" className="underline font-medium">👁 Click here to preview the email →</a></span>
+                ) : (
+                  <span>❌ {etherealResult.error}</span>
+                )}
+              </div>
+            )}
           </div>
-          {testResult&&(
-            <div className={`flex items-center gap-1.5 text-sm ${testResult.success?'text-apple-green':'text-apple-red'}`}>
-              {testResult.success?<CheckCircle size={14}/>:<XCircle size={14}/>}
-              {testResult.success?'Email sent successfully!':'Failed: '+testResult.error}
+
+          {/* Real SMTP test */}
+          <div className="space-y-2">
+            <p className="text-xs text-apple-gray-5">Send via your configured SMTP:</p>
+            <div className="flex gap-2">
+              <input type="email" className="input flex-1" value={testEmail} onChange={e=>setTestEmail(e.target.value)} placeholder="Send test to your inbox…"/>
+              <button onClick={handleTest} disabled={testLoading} className="btn-secondary flex items-center gap-1.5 whitespace-nowrap text-sm"><Send size={13}/>{testLoading?'Sending…':'Send Test'}</button>
             </div>
-          )}
+            {testResult&&(
+              <div className={`flex items-start gap-1.5 text-sm ${testResult.success?'text-apple-green':'text-apple-red'}`}>
+                {testResult.success?<CheckCircle size={14} className="mt-0.5 flex-shrink-0"/>:<XCircle size={14} className="mt-0.5 flex-shrink-0"/>}
+                <span>{testResult.success ? 'Email sent successfully! Check your inbox.' : 'Failed: ' + testResult.error}</span>
+              </div>
+            )}
+          </div>
         </div>
       </Section>
 
