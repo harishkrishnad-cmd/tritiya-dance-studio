@@ -333,6 +333,44 @@ export default function Landing() {
       </section>
       )}
 
+      {/* ── E-LEARNING SECTION ── */}
+<section id="elearning" style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #111827 50%, #0a0a0a 100%)', padding: 'clamp(70px,9vw,110px) max(24px, calc((100vw - 1100px)/2))', position: 'relative', overflow: 'hidden' }}>
+  {/* Decorative glow */}
+  <div style={{ position: 'absolute', top: '20%', right: '10%', width: 400, height: 400, background: 'radial-gradient(circle, rgba(0,113,227,0.12) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+  <div style={{ position: 'relative', zIndex: 1 }}>
+    <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.2em', color: '#0071e3', textTransform: 'uppercase', marginBottom: 12 }}>Digital Learning Hub</p>
+    <h2 style={{ fontSize: 'clamp(30px, 4.5vw, 52px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7', marginBottom: 16, lineHeight: 1.1, maxWidth: 640 }}>
+      One-of-a-kind learning,<br/>beyond the classroom.
+    </h2>
+    <p style={{ fontSize: 'clamp(15px, 1.8vw, 18px)', color: 'rgba(245,245,247,0.55)', lineHeight: 1.7, marginBottom: 52, maxWidth: 560 }}>
+      Tritiya Dance Studio brings classical Bharatanatyam into the digital age. Students access structured course materials, complete knowledge quizzes, earn badges and points — and receive printable certificates upon course completion.
+    </p>
+
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 16, marginBottom: 44 }}>
+      {[
+        { icon: '📚', title: 'Structured Courses', desc: 'Curated video lessons, reading materials and practice guides — organised by level from beginner to arangetram.' },
+        { icon: '📝', title: 'Quizzes & Assessments', desc: 'Test your theoretical knowledge with teacher-crafted quizzes after each course module. Instant scoring and feedback.' },
+        { icon: '🏅', title: 'Badges & Points', desc: 'Earn achievement badges and accumulate points as you progress — a gamified way to stay motivated and track growth.' },
+        { icon: '🎓', title: 'Official Certificates', desc: 'Pass a course and receive a beautifully designed, printable certificate signed by Revathi Krishna — a milestone to cherish.' },
+      ].map(f => (
+        <div key={f.title} style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '28px 24px', backdropFilter: 'blur(10px)', transition: 'border-color 0.3s, background 0.3s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(0,113,227,0.4)'; e.currentTarget.style.background='rgba(0,113,227,0.06)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; e.currentTarget.style.background='rgba(255,255,255,0.04)'; }}>
+          <div style={{ fontSize: 32, marginBottom: 14 }}>{f.icon}</div>
+          <h3 style={{ fontSize: 16, fontWeight: 600, color: '#f5f5f7', marginBottom: 8, letterSpacing: '-0.01em' }}>{f.title}</h3>
+          <p style={{ fontSize: 13.5, color: 'rgba(245,245,247,0.5)', lineHeight: 1.65 }}>{f.desc}</p>
+        </div>
+      ))}
+    </div>
+
+    <a href="/student" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#0071e3', color: '#fff', borderRadius: 980, fontSize: 15, fontWeight: 500, textDecoration: 'none', transition: 'opacity 0.2s' }}
+      onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+      Enter Learning Hub →
+    </a>
+  </div>
+</section>
+
       {/* ── CINEMATIC QUOTE ── */}
       <section style={{ position: 'relative', height: 'clamp(320px, 50vw, 600px)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <img src={s('quote_image', data)} alt="Dance" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.3)' }} loading="lazy" />

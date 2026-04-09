@@ -19,14 +19,43 @@ function AttendanceBadge({ status }) {
   return <span className="flex items-center gap-1 text-apple-orange text-xs"><Clock size={12}/>{status}</span>;
 }
 
+function PayNowModal({ onClose, upiQr }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: 20, padding: 32, maxWidth: 340, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+        <div style={{ fontSize: 28, marginBottom: 8 }}>💳</div>
+        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>Pay via UPI</h2>
+        <p style={{ fontSize: 13, color: '#86868b', marginBottom: 20 }}>Scan the QR code with any UPI app to pay your fees</p>
+        {upiQr ? (
+          <img src={upiQr} alt="UPI QR Code" style={{ width: 200, height: 200, objectFit: 'contain', borderRadius: 12, border: '1px solid #e8e8ed', padding: 8, margin: '0 auto', display: 'block' }} />
+        ) : (
+          <div style={{ width: 200, height: 200, background: '#f5f5f7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: '#86868b', fontSize: 13 }}>
+            QR code not configured yet.<br/>Contact the studio.
+          </div>
+        )}
+        <p style={{ fontSize: 12, color: '#86868b', marginTop: 16 }}>PhonePe · Google Pay · Paytm · BHIM</p>
+        <button onClick={onClose} style={{ marginTop: 20, padding: '10px 28px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 export default function ParentDashboard({ studentId, onLogout }) {
   const [tab, setTab] = useState('profile');
   const [profile, setProfile] = useState(null);
   const [attendance, setAttendance] = useState(null);
   const [payments, setPayments] = useState(null);
   const [plans, setPlans] = useState(null);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [upiQr, setUpiQr] = useState('');
 
   useEffect(() => { api.getParentStudent(studentId).then(setProfile).catch(() => {}); }, [studentId]);
+
+  useEffect(() => {
+    fetch('/api/website/public').then(r => r.json()).then(d => {
+      setUpiQr(d.settings?.upi_qr_image || '');
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (tab === 'attendance' && !attendance) api.getParentAttendance(studentId).then(setAttendance).catch(() => {});
@@ -171,6 +200,10 @@ export default function ParentDashboard({ studentId, onLogout }) {
                   ))}
                 </div>
               )}
+              {showPayModal && <PayNowModal onClose={() => setShowPayModal(false)} upiQr={upiQr} />}
+              <button onClick={() => setShowPayModal(true)} className="w-full btn-primary flex items-center justify-center gap-2 py-3">
+                💳 Pay Now via UPI
+              </button>
               <div className="card divide-y divide-apple-gray-2/60">
                 {payments.records?.length === 0 && <p className="text-sm text-apple-gray-4 py-4 text-center">No payment records yet</p>}
                 {payments.records?.map(p => (

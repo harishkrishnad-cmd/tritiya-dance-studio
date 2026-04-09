@@ -29,6 +29,8 @@ export default function Settings({ onNameChange }) {
   const [waLogsLoaded,setWaLogsLoaded]=useState(false);
   const [upiUrlInput, setUpiUrlInput] = useState('');
   const upiFileRef = useRef();
+  const [smtpProvider, setSmtpProvider] = useState('');
+  const [smtpHint, setSmtpHint] = useState('');
 
   useEffect(()=>{ api.getSettings().then(d=>{ setS(d); setTestEmail(d.smtp_user||''); }); },[]);
   function set(key,val){ setS(v=>({...v,[key]:val})); setSaved(false); }
@@ -71,24 +73,41 @@ export default function Settings({ onNameChange }) {
         </div>
       </Section>
 
-      <Section title="Email Configuration (Gmail Setup)" icon={Mail}>
-        {/* Gmail step-by-step guide */}
-        <div className="bg-blue-50 border border-blue-100 rounded-apple-sm p-4 space-y-2">
-          <p className="text-xs font-semibold text-apple-blue uppercase tracking-wide">📧 How to set up Gmail in 3 steps</p>
-          <ol className="text-xs text-apple-gray-5 space-y-1.5 list-decimal list-inside">
-            <li>Go to <a href="https://myaccount.google.com/security" target="_blank" rel="noreferrer" className="text-apple-blue underline">myaccount.google.com/security</a> → Enable <strong>2-Step Verification</strong></li>
-            <li>On that same page, scroll to <strong>"App passwords"</strong> → Select app: <em>Mail</em> → Generate → Copy the 16-character password</li>
-            <li>Paste it below as <strong>App Password</strong> · Use your Gmail address as Username</li>
-          </ol>
-          <p className="text-xs text-apple-gray-4 mt-1">⚠️ Use the 16-char App Password — your regular Gmail password will NOT work.</p>
+      <Section title="Email Configuration" icon={Mail}>
+        {/* Provider quick-setup cards */}
+        <div>
+          <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-2">Quick Setup — Choose your email provider</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { id: 'brevo', name: 'Brevo', tag: 'Free 300/day', host: 'smtp-relay.brevo.com', port: '587', secure: 'false', hint: 'Sign up free at brevo.com → Settings → SMTP & API → Copy SMTP key as password' },
+              { id: 'gmail', name: 'Gmail', tag: 'App Password', host: 'smtp.gmail.com', port: '587', secure: 'false', hint: 'myaccount.google.com → Security → 2-Step Verification → App passwords → Mail' },
+              { id: 'outlook', name: 'Outlook', tag: 'Microsoft', host: 'smtp-mail.outlook.com', port: '587', secure: 'false', hint: 'Use your Outlook/Hotmail email and regular password' },
+              { id: 'zoho', name: 'Zoho Mail', tag: 'Free plan', host: 'smtp.zoho.in', port: '587', secure: 'false', hint: 'Use your Zoho email address and account password' },
+              { id: 'sendgrid', name: 'SendGrid', tag: '100 free/day', host: 'smtp.sendgrid.net', port: '587', secure: 'false', hint: 'Username: apikey · Password: your SendGrid API key from app.sendgrid.com' },
+              { id: 'custom', name: 'Custom SMTP', tag: 'Any provider', host: '', port: '587', secure: 'false', hint: 'Manually configure your SMTP host and credentials' },
+            ].map(p => (
+              <button key={p.id} onClick={() => {
+                if (p.host) { set('smtp_host', p.host); set('smtp_port', p.port); set('smtp_secure', p.secure); }
+                setSmtpHint(p.hint);
+                setSmtpProvider(p.id);
+              }} className={`p-3 rounded-apple-sm border text-left transition-all ${smtpProvider === p.id ? 'border-apple-blue bg-blue-50' : 'border-apple-gray-2 bg-white hover:border-apple-blue/40'}`}>
+                <p className="text-xs font-semibold text-apple-text">{p.name}</p>
+                <p className="text-xs text-apple-blue mt-0.5">{p.tag}</p>
+              </button>
+            ))}
+          </div>
+          {smtpHint && (
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-apple-sm">
+              <p className="text-xs text-apple-gray-5">💡 {smtpHint}</p>
+            </div>
+          )}
         </div>
-        <p className="text-xs text-apple-gray-5">Pre-filled with Gmail defaults. Just enter your Gmail + App Password below.</p>
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div><label className="label">SMTP Host</label><input className="input" value={s.smtp_host||'smtp.gmail.com'} onChange={e=>set('smtp_host',e.target.value)} placeholder="smtp.gmail.com"/></div>
             <div><label className="label">SMTP Port</label><input type="number" className="input" value={s.smtp_port||'587'} onChange={e=>set('smtp_port',e.target.value)}/></div>
-            <div><label className="label">Your Gmail Address</label><input type="email" className="input" value={s.smtp_user||''} onChange={e=>{set('smtp_user',e.target.value);if(!s.email_from)set('email_from',`Tritiya Dance Studio <${e.target.value}>`);}} placeholder="yourname@gmail.com"/></div>
-            <div><label className="label">App Password (16 chars)</label><input type="password" className="input font-mono" value={s.smtp_pass||''} onChange={e=>set('smtp_pass',e.target.value)} placeholder="xxxx xxxx xxxx xxxx"/></div>
+            <div><label className="label">Username / Email</label><input type="email" className="input" value={s.smtp_user||''} onChange={e=>{set('smtp_user',e.target.value);if(!s.email_from)set('email_from',`Tritiya Dance Studio <${e.target.value}>`);}} placeholder="yourname@example.com"/></div>
+            <div><label className="label">Password / API Key</label><input type="password" className="input font-mono" value={s.smtp_pass||''} onChange={e=>set('smtp_pass',e.target.value)} placeholder="Password or API key"/></div>
           </div>
           <div><label className="label">From Name & Email</label><input className="input" value={s.email_from||''} onChange={e=>set('email_from',e.target.value)} placeholder="Tritiya Dance Studio <your@gmail.com>"/></div>
           <div className="flex items-center gap-2">

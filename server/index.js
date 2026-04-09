@@ -28,6 +28,9 @@ app.use('/api/parent',      authMiddleware, require('./routes/parent'));
 // Website CMS (public GET + admin POST/PUT/DELETE)
 app.use('/api/website',     require('./routes/website'));
 
+// Enrollment form (public submit + admin create)
+app.use('/api/enroll',       require('./routes/enroll'));
+
 // OTP email login (public)
 app.use('/api/otp',         require('./routes/otp'));
 

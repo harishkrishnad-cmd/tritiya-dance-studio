@@ -16,6 +16,7 @@ import LMSAdmin from './pages/LMSAdmin';
 import StudentPortal from './pages/student/StudentPortal';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
+import EnrollPage from './pages/EnrollPage';
 import InstallPrompt from './components/InstallPrompt';
 import { api } from './api';
 
@@ -71,6 +72,11 @@ export default function App() {
         <InstallPrompt />
       </>
     );
+  }
+
+  // Enrollment form (public)
+  if (location.pathname.startsWith('/enroll/')) {
+    return <Routes><Route path="/enroll/:token" element={<EnrollPage />} /></Routes>;
   }
 
   // Admin login at /login

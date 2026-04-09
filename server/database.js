@@ -159,6 +159,15 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS enrollment_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE NOT NULL,
+    label TEXT DEFAULT 'New Student Enrollment',
+    active INTEGER DEFAULT 1,
+    uses_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
   -- Enrollment links sent to parents
   CREATE TABLE IF NOT EXISTS enrollment_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

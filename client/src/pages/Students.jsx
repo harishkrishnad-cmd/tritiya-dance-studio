@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { UserPlus, Search, Edit2, Trash2, Mail, Phone, ChevronDown, ChevronUp, BookOpen, Copy, RefreshCw, KeyRound } from 'lucide-react';
+import { UserPlus, Search, Edit2, Trash2, Mail, Phone, ChevronDown, ChevronUp, BookOpen, Copy, RefreshCw, KeyRound, Link } from 'lucide-react';
 import Modal from '../components/Modal';
 import { api } from '../api';
 
@@ -216,9 +216,34 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState('active');
+  const [enrollModal, setEnrollModal] = useState(false);
+  const [enrollLinks, setEnrollLinks] = useState([]);
+  const [enrollLoading, setEnrollLoading] = useState(false);
+  const [newLinkLabel, setNewLinkLabel] = useState('');
 
   const load = useCallback(async () => { setLoading(true); setStudents(await api.getStudents({status:statusFilter})); setLoading(false); }, [statusFilter]);
   useEffect(() => { load(); }, [load]);
+
+  async function loadEnrollLinks() {
+    setEnrollLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/enroll/links', { headers: { Authorization: `Bearer ${token}` } });
+      setEnrollLinks(await res.json());
+    } catch {}
+    setEnrollLoading(false);
+  }
+
+  async function createEnrollLink() {
+    const token = localStorage.getItem('auth_token');
+    await fetch('/api/enroll/create-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ label: newLinkLabel || 'New Student Enrollment' }),
+    });
+    setNewLinkLabel('');
+    loadEnrollLinks();
+  }
 
   function openAdd() { setEditing(null); setForm(empty); setModalOpen(true); }
   function openEdit(s) { setEditing(s); setForm({...empty,...s,monthly_fee:s.monthly_fee||'',status:s.status||'active'}); setModalOpen(true); }
@@ -244,7 +269,10 @@ export default function Students() {
           <h1 className="text-xl font-semibold text-apple-text tracking-tight">Students</h1>
           <p className="text-xs text-apple-gray-5 mt-0.5">{students.length} {statusFilter === 'all' ? 'total' : statusFilter}</p>
         </div>
-        <button onClick={openAdd} className="btn-primary flex items-center gap-1.5"><UserPlus size={14}/> Add Student</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setEnrollModal(true); loadEnrollLinks(); }} className="btn-secondary flex items-center gap-1.5 text-sm"><Link size={13}/> Enrollment Link</button>
+          <button onClick={openAdd} className="btn-primary flex items-center gap-1.5"><UserPlus size={14}/> Add Student</button>
+        </div>
       </div>
 
       <div className="flex gap-1.5 flex-wrap">
@@ -308,6 +336,41 @@ export default function Students() {
           </div>
         ))}
       </div>
+
+      <Modal isOpen={enrollModal} onClose={() => setEnrollModal(false)} title="Enrollment Links" size="md">
+        <div className="space-y-4">
+          <p className="text-sm text-apple-gray-5">Share a link with parents to self-enroll their child. The form collects all details and adds the student to your system automatically.</p>
+          <div className="flex gap-2">
+            <input className="input flex-1" placeholder="Label (e.g. Batch 2025)" value={newLinkLabel} onChange={e => setNewLinkLabel(e.target.value)} />
+            <button onClick={createEnrollLink} className="btn-primary whitespace-nowrap">+ Create Link</button>
+          </div>
+          {enrollLoading ? <p className="text-sm text-apple-gray-5">Loading…</p> : (
+            <div className="space-y-2">
+              {enrollLinks.filter(l => l.active).map(l => {
+                const url = `${window.location.origin}/enroll/${l.token}`;
+                return (
+                  <div key={l.id} className="bg-apple-gray rounded-apple-sm p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-apple-text">{l.label}</p>
+                        <p className="text-xs text-apple-gray-5 truncate font-mono mt-0.5">{url}</p>
+                        <p className="text-xs text-apple-gray-5 mt-1">{l.uses_count} enrollment{l.uses_count !== 1 ? 's' : ''} · Created {new Date(l.created_at).toLocaleDateString('en-IN')}</p>
+                      </div>
+                      <button onClick={() => navigator.clipboard.writeText(url)} className="text-xs text-apple-blue hover:underline flex-shrink-0">Copy</button>
+                    </div>
+                    <div className="mt-2">
+                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(url)}`} alt="QR" className="w-24 h-24 rounded border border-apple-gray-2" />
+                    </div>
+                  </div>
+                );
+              })}
+              {enrollLinks.filter(l => l.active).length === 0 && !enrollLoading && (
+                <p className="text-sm text-apple-gray-5 text-center py-4">No active enrollment links yet. Create one above.</p>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
 
       <Modal isOpen={modalOpen} onClose={()=>setModalOpen(false)} title={editing?'Edit Student':'New Student'} size="lg">
         <StudentForm data={form} onChange={(k,v)=>setForm(f=>({...f,[k]:v}))} />
