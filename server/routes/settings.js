@@ -17,7 +17,7 @@ router.post('/', (req, res) => {
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
   const saveAll = db.transaction((data) => {
     for (const [key, value] of Object.entries(data)) {
-      if ((key === 'smtp_pass' || key === 'twilio_auth_token') && value === '••••••••') continue;
+      if ((key === 'smtp_pass' || key === 'twilio_auth_token') && (value === '••••••••' || value === '')) continue;
       upsert.run(key, value);
     }
   });
