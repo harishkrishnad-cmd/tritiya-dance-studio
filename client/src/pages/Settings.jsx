@@ -37,9 +37,11 @@ export default function Settings({ onNameChange }) {
 
   useEffect(()=>{
     api.getSettings().then(d=>{
-      // If password comes back masked, note it's saved but don't fill the field
       if (d.smtp_pass === '••••••••') { setSmtpPassSaved(true); d.smtp_pass = ''; }
+      if (d.email_api_key === '••••••••') { setSmtpPassSaved(true); d.email_api_key = ''; }
       setS(d); setTestEmail(d.smtp_user||'');
+      // Set active provider card
+      if (d.email_provider) setSmtpProvider(d.email_provider);
     });
   },[]);
 
@@ -93,94 +95,125 @@ export default function Settings({ onNameChange }) {
       </Section>
 
       <Section title="Email Configuration" icon={Mail}>
-        {/* Provider quick-setup cards */}
+        {/* Provider selector */}
         <div>
-          <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-2">Quick Setup — Choose your email provider</p>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-2">Step 1 — Choose how to send emails</p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {[
-              { id: 'brevo', name: 'Brevo', tag: 'Free 300/day', host: 'smtp-relay.brevo.com', port: '587', secure: 'false', hint: 'Sign up free at brevo.com → Settings → SMTP & API → Generate SMTP key. Username: shown in Brevo. Password: the SMTP key.' },
-              { id: 'gmail', name: 'Gmail', tag: 'App Password', host: 'smtp.gmail.com', port: '587', secure: 'false', hint: 'Go to myaccount.google.com → Security → 2-Step Verification → App passwords → create one for Mail. Use that 16-char code as password.' },
-              { id: 'outlook', name: 'Outlook', tag: 'Microsoft', host: 'smtp-mail.outlook.com', port: '587', secure: 'false', hint: 'Use your full Outlook/Hotmail email as username and regular account password.' },
-              { id: 'zoho', name: 'Zoho Mail', tag: 'Free plan', host: 'smtp.zoho.in', port: '587', secure: 'false', hint: 'Use your Zoho email address as username and account password.' },
-              { id: 'sendgrid', name: 'SendGrid', tag: '100 free/day', host: 'smtp.sendgrid.net', port: '587', secure: 'false', hint: 'Username must be exactly: apikey · Password: your SendGrid API key from app.sendgrid.com/settings/api_keys' },
-              { id: 'custom', name: 'Custom SMTP', tag: 'Any provider', host: '', port: '587', secure: 'false', hint: 'Manually configure your SMTP host and credentials below.' },
+              { id: 'brevo', name: '⭐ Brevo API', tag: 'Recommended · Free 300/day', desc: 'Works on all hosting. Uses HTTPS, no SMTP needed.' },
+              { id: 'resend', name: 'Resend API', tag: 'Free 100/day', desc: 'Developer-friendly API. Works on all hosting.' },
+              { id: 'smtp', name: 'Custom SMTP', tag: 'Advanced only', desc: 'May be blocked on some hosts (e.g. Render free tier).' },
             ].map(p => (
-              <button key={p.id} onClick={() => {
-                if (p.host) {
-                  set('smtp_host', p.host);
-                  set('smtp_port', p.port);
-                  set('smtp_secure', p.secure);
-                  // Clear wrong from-email so user re-enters correctly
-                  setS(v => {
-                    const from = v.email_from || '';
-                    // if from looks like it contains the old smtp host, clear it
-                    const looksWrong = from.includes('smtp-') || from.includes('.brevo.') || from.includes('.gmail.') || from.includes('.outlook.') || from.includes('.zoho.') || from.includes('.sendgrid.');
-                    return looksWrong ? { ...v, smtp_host: p.host, smtp_port: p.port, smtp_secure: p.secure, email_from: '' } : { ...v, smtp_host: p.host, smtp_port: p.port, smtp_secure: p.secure };
-                  });
-                }
-                setSmtpHint(p.hint);
-                setSmtpProvider(p.id);
-                setSaved(false);
-              }} className={`p-3 rounded-apple-sm border text-left transition-all ${smtpProvider === p.id ? 'border-apple-blue bg-blue-50' : 'border-apple-gray-2 bg-white hover:border-apple-blue/40'}`}>
+              <button key={p.id} onClick={() => { set('email_provider', p.id); setSmtpProvider(p.id); setSaved(false); }}
+                className={`p-3 rounded-apple-sm border text-left transition-all ${(s.email_provider||'smtp') === p.id ? 'border-apple-blue bg-blue-50' : 'border-apple-gray-2 bg-white hover:border-apple-blue/40'}`}>
                 <p className="text-xs font-semibold text-apple-text">{p.name}</p>
                 <p className="text-xs text-apple-blue mt-0.5">{p.tag}</p>
+                <p className="text-xs text-apple-gray-5 mt-1 leading-snug">{p.desc}</p>
               </button>
             ))}
           </div>
-          {smtpHint && (
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-100 rounded-apple-sm">
-              <p className="text-xs text-apple-gray-5">💡 {smtpHint}</p>
-            </div>
-          )}
         </div>
-        <div className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label className="label">SMTP Host</label><input className="input" value={s.smtp_host||'smtp.gmail.com'} onChange={e=>set('smtp_host',e.target.value)} placeholder="smtp.gmail.com"/></div>
-            <div><label className="label">SMTP Port</label><input type="number" className="input" value={s.smtp_port||'587'} onChange={e=>set('smtp_port',e.target.value)}/></div>
-            <div><label className="label">Username / Email</label><input type="email" className="input" value={s.smtp_user||''} onChange={e=>{
-              set('smtp_user',e.target.value);
-              // Always keep From in sync with the username (it should be the sender email, not the SMTP host)
-              const schoolName = s.school_name || 'Tritiya Dance Studio';
-              set('email_from', `${schoolName} <${e.target.value}>`);
-            }} placeholder="yourname@example.com"/></div>
-            <div>
-              <label className="label">Password / API Key</label>
-              <input type="password" className="input font-mono" value={s.smtp_pass||''} onChange={e=>{ set('smtp_pass',e.target.value); setSmtpPassSaved(false); }} placeholder={smtpPassSaved ? '••••••••  (saved — type to change)' : 'Password or API key'}/>
-              {smtpPassSaved && !s.smtp_pass && <p className="text-xs text-apple-green mt-1">✓ Password is saved. Leave blank to keep it, or type to replace.</p>}
-            </div>
-          </div>
-          <div><label className="label">From Name & Email</label><input className="input" value={s.email_from||''} onChange={e=>set('email_from',e.target.value)} placeholder="Tritiya Dance Studio <your@gmail.com>"/></div>
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="ssl" checked={s.smtp_secure==='true'} onChange={e=>{
-              const useSSL = e.target.checked;
-              set('smtp_secure', useSSL ? 'true' : 'false');
-              // Auto-switch port: 465 for SSL, 587 for STARTTLS
-              if (useSSL && (s.smtp_port === '587' || !s.smtp_port)) set('smtp_port', '465');
-              if (!useSSL && s.smtp_port === '465') set('smtp_port', '587');
-            }} className="w-4 h-4 accent-apple-blue"/>
-            <label htmlFor="ssl" className="text-sm text-apple-text">Use SSL/TLS (port 465) — <span className="text-apple-gray-5 text-xs">leave unchecked for most providers including Brevo, Gmail, Zoho</span></label>
-          </div>
-        </div>
-        <div className="pt-3 border-t border-apple-gray-2 space-y-3">
-          <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide">Test Connection</p>
 
-          {/* Ethereal quick-test (no credentials needed) */}
-          <div className="bg-apple-gray rounded-apple-sm p-3 space-y-2">
-            <p className="text-xs font-medium text-apple-text">🧪 Quick Test — No credentials needed</p>
-            <p className="text-xs text-apple-gray-5">Sends a test email via Ethereal (a safe dummy service). Click the preview link to see the rendered email. This confirms your email template works before configuring real SMTP.</p>
-            <button onClick={handleEtherealTest} disabled={etherealLoading} className="btn-secondary text-sm flex items-center gap-1.5">
-              <Send size={13}/>{etherealLoading ? 'Sending…' : 'Send Ethereal Test Email'}
-            </button>
-            {etherealResult && (
-              <div className={`text-sm ${etherealResult.success ? 'text-apple-green' : 'text-apple-red'}`}>
-                {etherealResult.success ? (
-                  <span>✅ Sent! <a href={etherealResult.previewUrl} target="_blank" rel="noreferrer" className="underline font-medium">👁 Click here to preview the email →</a></span>
-                ) : (
-                  <span>❌ {etherealResult.error}</span>
-                )}
+        {/* Brevo API config */}
+        {(s.email_provider === 'brevo' || (!s.email_provider && smtpProvider === 'brevo')) && (
+          <div className="space-y-3 p-3 bg-blue-50 border border-blue-100 rounded-apple-sm">
+            <p className="text-xs font-semibold text-apple-text">Brevo API Setup</p>
+            <ol className="text-xs text-apple-gray-5 space-y-1 list-decimal pl-4">
+              <li>Sign up free at <strong>brevo.com</strong></li>
+              <li>Go to <strong>Settings → API Keys → Generate a new API key</strong></li>
+              <li>Copy the key (starts with <code className="bg-white px-1 rounded">xkeysib-</code>) and paste below</li>
+              <li>Set your From email to any email you verified in Brevo</li>
+            </ol>
+            <div className="space-y-2">
+              <div>
+                <label className="label">Brevo API Key</label>
+                <input type="password" className="input font-mono text-sm" value={s.email_api_key||''} onChange={e=>{ set('email_api_key',e.target.value); setSmtpPassSaved(false); }} placeholder="xkeysib-…"/>
+                {smtpPassSaved && !s.email_api_key && <p className="text-xs text-apple-green mt-1">✓ API key saved. Leave blank to keep it.</p>}
               </div>
-            )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="label">From Name</label>
+                  <input className="input" value={s.email_from_name||s.school_name||''} onChange={e=>set('email_from_name',e.target.value)} placeholder="Tritiya Dance Studio"/>
+                </div>
+                <div>
+                  <label className="label">From Email Address</label>
+                  <input type="email" className="input" value={s.email_from_address||''} onChange={e=>set('email_from_address',e.target.value)} placeholder="you@yourdomain.com"/>
+                  <p className="text-xs text-apple-gray-5 mt-1">Must be verified in Brevo. You can use your Gmail if verified there.</p>
+                </div>
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* Resend API config */}
+        {s.email_provider === 'resend' && (
+          <div className="space-y-3 p-3 bg-blue-50 border border-blue-100 rounded-apple-sm">
+            <p className="text-xs font-semibold text-apple-text">Resend API Setup</p>
+            <ol className="text-xs text-apple-gray-5 space-y-1 list-decimal pl-4">
+              <li>Sign up free at <strong>resend.com</strong></li>
+              <li>Go to <strong>API Keys → Create API Key</strong></li>
+              <li>Add your domain or verify an email address under <strong>Domains</strong></li>
+              <li>Paste the key below</li>
+            </ol>
+            <div className="space-y-2">
+              <div>
+                <label className="label">Resend API Key</label>
+                <input type="password" className="input font-mono text-sm" value={s.email_api_key||''} onChange={e=>{ set('email_api_key',e.target.value); setSmtpPassSaved(false); }} placeholder="re_…"/>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <label className="label">From Name</label>
+                  <input className="input" value={s.email_from_name||s.school_name||''} onChange={e=>set('email_from_name',e.target.value)} placeholder="Tritiya Dance Studio"/>
+                </div>
+                <div>
+                  <label className="label">From Email Address</label>
+                  <input type="email" className="input" value={s.email_from_address||''} onChange={e=>set('email_from_address',e.target.value)} placeholder="you@yourdomain.com"/>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SMTP config */}
+        {(s.email_provider === 'smtp' || (!s.email_provider && smtpProvider !== 'brevo' && smtpProvider !== 'resend')) && (
+          <div className="space-y-3">
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-apple-sm">
+              <p className="text-xs text-yellow-800">⚠️ SMTP may be blocked on Render.com free tier. If test emails time out, switch to Brevo API or Resend API above — they use HTTPS and work everywhere.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className="label">SMTP Host</label><input className="input" value={s.smtp_host||''} onChange={e=>set('smtp_host',e.target.value)} placeholder="smtp.gmail.com"/></div>
+              <div><label className="label">SMTP Port</label><input type="number" className="input" value={s.smtp_port||'587'} onChange={e=>set('smtp_port',e.target.value)}/></div>
+              <div><label className="label">Username / Email</label><input type="email" className="input" value={s.smtp_user||''} onChange={e=>set('smtp_user',e.target.value)} placeholder="yourname@example.com"/></div>
+              <div>
+                <label className="label">Password / SMTP Key</label>
+                <input type="password" className="input font-mono" value={s.smtp_pass||''} onChange={e=>{ set('smtp_pass',e.target.value); setSmtpPassSaved(false); }} placeholder={smtpPassSaved ? '•••••••• (saved)' : 'Password or SMTP key'}/>
+                {smtpPassSaved && !s.smtp_pass && <p className="text-xs text-apple-green mt-1">✓ Saved. Leave blank to keep it.</p>}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="label">From Name</label>
+                <input className="input" value={s.email_from_name||s.school_name||''} onChange={e=>set('email_from_name',e.target.value)} placeholder="Tritiya Dance Studio"/>
+              </div>
+              <div>
+                <label className="label">From Email Address</label>
+                <input type="email" className="input" value={s.email_from_address||''} onChange={e=>set('email_from_address',e.target.value)} placeholder="you@gmail.com"/>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="ssl" checked={s.smtp_secure==='true'} onChange={e=>{
+                const useSSL = e.target.checked;
+                set('smtp_secure', useSSL ? 'true' : 'false');
+                if (useSSL && (s.smtp_port === '587' || !s.smtp_port)) set('smtp_port', '465');
+                if (!useSSL && s.smtp_port === '465') set('smtp_port', '587');
+              }} className="w-4 h-4 accent-apple-blue"/>
+              <label htmlFor="ssl" className="text-sm text-apple-text">Use SSL/TLS (port 465) — <span className="text-apple-gray-5 text-xs">leave unchecked for Gmail, Brevo SMTP, Zoho</span></label>
+            </div>
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-apple-gray-2 space-y-3">
+          <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide">Step 2 — Test your configuration</p>
 
           {/* Real SMTP test */}
           <div className="space-y-2">

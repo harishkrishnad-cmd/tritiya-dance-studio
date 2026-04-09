@@ -1,3 +1,4 @@
+const https = require('https');
 const nodemailer = require('nodemailer');
 const db = require('../database');
 
@@ -6,36 +7,101 @@ function getSettings() {
     .reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {});
 }
 
-function createTransporter(settings) {
-  const port = parseInt(settings.smtp_port) || 587;
-  const secure = settings.smtp_secure === 'true';
-  return nodemailer.createTransport({
-    host: settings.smtp_host || 'smtp.gmail.com',
-    port,
-    secure,
-    auth: { user: settings.smtp_user, pass: settings.smtp_pass },
-    connectionTimeout: 10000,   // fail after 10s instead of hanging
-    socketTimeout: 15000,
-    greetingTimeout: 10000,
-    tls: { rejectUnauthorized: false },
-    ...(port === 587 && !secure ? { requireTLS: true } : {}),
-  });
-}
-
 function logEmail(studentId, type, subject, recipientEmail, status, errorMessage = null) {
   db.prepare(`INSERT INTO email_logs (student_id, email_type, subject, recipient_email, status, error_message) VALUES (?, ?, ?, ?, ?, ?)`)
     .run(studentId, type, subject, recipientEmail, status, errorMessage);
 }
 
+// Generic HTTPS POST helper — no extra dependencies needed
+function httpsPost(hostname, path, headers, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req = https.request({ hostname, path, method: 'POST', headers: { ...headers, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) } }, (res) => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.setTimeout(15000, () => { req.destroy(); reject(new Error('Connection timeout')); });
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+}
+
+// ── Brevo HTTP API ─────────────────────────────────────────────────────────
+async function sendViaBrevo(settings, to, subject, html) {
+  const fromName = settings.email_from_name || settings.school_name || 'Tritiya Dance Studio';
+  const fromAddr = settings.email_from_address || settings.email_from || settings.smtp_user || '';
+  if (!fromAddr) throw new Error('From address not configured. Set "From Email Address" in Settings.');
+  const res = await httpsPost('api.brevo.com', '/v3/smtp/email', { 'api-key': settings.email_api_key }, {
+    sender: { name: fromName, email: fromAddr },
+    to: [{ email: to }],
+    subject,
+    htmlContent: html,
+  });
+  if (res.status >= 400) throw new Error(`Brevo API error ${res.status}: ${JSON.stringify(res.body)}`);
+  return res.body;
+}
+
+// ── Resend HTTP API ────────────────────────────────────────────────────────
+async function sendViaResend(settings, to, subject, html) {
+  const fromName = settings.email_from_name || settings.school_name || 'Tritiya Dance Studio';
+  const fromAddr = settings.email_from_address || settings.email_from || '';
+  if (!fromAddr) throw new Error('From address not configured. Set "From Email Address" in Settings.');
+  const res = await httpsPost('api.resend.com', '/emails', { 'Authorization': `Bearer ${settings.email_api_key}` }, {
+    from: `${fromName} <${fromAddr}>`,
+    to: [to],
+    subject,
+    html,
+  });
+  if (res.status >= 400) throw new Error(`Resend API error ${res.status}: ${JSON.stringify(res.body)}`);
+  return res.body;
+}
+
+// ── SMTP via nodemailer ────────────────────────────────────────────────────
+async function sendViaSMTP(settings, to, subject, html) {
+  const port = parseInt(settings.smtp_port) || 587;
+  const secure = settings.smtp_secure === 'true';
+  const transporter = nodemailer.createTransport({
+    host: settings.smtp_host || 'smtp.gmail.com',
+    port,
+    secure,
+    auth: { user: settings.smtp_user, pass: settings.smtp_pass },
+    connectionTimeout: 10000,
+    socketTimeout: 15000,
+    greetingTimeout: 10000,
+    tls: { rejectUnauthorized: false },
+    ...(port === 587 && !secure ? { requireTLS: true } : {}),
+  });
+  const fromName = settings.email_from_name || settings.school_name || 'Tritiya Dance Studio';
+  const from = settings.email_from || `${fromName} <${settings.smtp_user}>`;
+  await transporter.sendMail({ from, to, subject, html });
+}
+
+// ── Main send function ─────────────────────────────────────────────────────
 async function sendEmail(to, subject, html, studentId = null, emailType = 'general') {
   const settings = getSettings();
-  if (!settings.smtp_user || !settings.smtp_pass) {
-    console.log('[Email] Not configured. Skipping:', subject);
-    return { success: false, error: 'Email not configured' };
+  const provider = settings.email_provider || 'smtp';
+
+  // Validate config
+  if (provider === 'brevo' || provider === 'resend') {
+    if (!settings.email_api_key) {
+      return { success: false, error: `API key not configured. Go to Settings and enter your ${provider === 'brevo' ? 'Brevo' : 'Resend'} API key.` };
+    }
+  } else {
+    if (!settings.smtp_user || !settings.smtp_pass) {
+      return { success: false, error: 'Email not configured. Go to Settings and enter SMTP credentials.' };
+    }
   }
+
   try {
-    const transporter = createTransporter(settings);
-    await transporter.sendMail({ from: settings.email_from || settings.smtp_user, to, subject, html });
+    if (provider === 'brevo') await sendViaBrevo(settings, to, subject, html);
+    else if (provider === 'resend') await sendViaResend(settings, to, subject, html);
+    else await sendViaSMTP(settings, to, subject, html);
+
     logEmail(studentId, emailType, subject, to, 'sent');
     return { success: true };
   } catch (err) {
@@ -44,6 +110,7 @@ async function sendEmail(to, subject, html, studentId = null, emailType = 'gener
   }
 }
 
+// ── Email templates ────────────────────────────────────────────────────────
 function base(schoolName, content) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
@@ -95,7 +162,7 @@ async function sendWelcomeEmail(student, plainPassword) {
       <div class="cred-row"><span class="cred-lbl">Password</span><span class="cred-val">${plainPassword || student.parent_pin || '—'}</span></div>
       ${appUrl ? `<div class="cred-row"><span class="cred-lbl">Portal URL</span><span class="cred-val">${appUrl}</span></div>` : ''}
     </div>
-    <p style="font-size:13px;color:#86868b">Please keep these credentials safe. You can change your password after logging in.</p>
+    <p style="font-size:13px;color:#86868b">Please keep these credentials safe.</p>
     ${settings.upi_qr_image ? `<hr><p style="font-size:14px;font-weight:600;color:#1d1d1f;margin-bottom:8px">💳 Fee Payment via UPI</p><p style="font-size:13px;color:#6e6e73;margin-bottom:12px">Scan the QR code below to pay monthly fees:</p><div style="text-align:center;margin:16px 0"><img src="${settings.upi_qr_image}" alt="UPI QR Code" style="max-width:220px;border-radius:12px;border:1px solid #e8e8ed;padding:12px;background:#fff" /></div>` : ''}
     <p>With warm regards,<br><strong>${s}</strong></p>
   `);
@@ -154,7 +221,6 @@ async function sendLessonPlanEmail(student, plan, settings) {
     ${plan.topic ? `<div class="box"><div class="lbl">Topic</div><div class="val" style="font-size:15px">${plan.topic}</div></div>` : ''}
     ${plan.description ? `<div class="box"><div class="lbl">Details</div><div class="val" style="font-size:15px">${plan.description}</div></div>` : ''}
     ${plan.homework ? `<div class="box"><div class="lbl">Practice / Homework</div><div class="val" style="font-size:15px;color:#ff9500">${plan.homework}</div></div>` : ''}
-    <div class="box"><div class="lbl">Class Time</div><div class="val">${plan.start_time} – ${plan.end_time}</div></div>
     <p>Please help ${student.name} prepare for this session.</p>
     <p>Regards,<br><strong>${s}</strong></p>
   `);

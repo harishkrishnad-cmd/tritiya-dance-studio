@@ -10,6 +10,7 @@ router.get('/', (req, res) => {
   const s = rows.reduce((acc, { key, value }) => ({ ...acc, [key]: value }), {});
   if (s.smtp_pass) s.smtp_pass = '••••••••';
   if (s.twilio_auth_token) s.twilio_auth_token = '••••••••';
+  if (s.email_api_key) s.email_api_key = '••••••••';
   res.json(s);
 });
 
@@ -17,7 +18,7 @@ router.post('/', (req, res) => {
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
   const saveAll = db.transaction((data) => {
     for (const [key, value] of Object.entries(data)) {
-      if ((key === 'smtp_pass' || key === 'twilio_auth_token') && (value === '••••••••' || value === '')) continue;
+      if ((key === 'smtp_pass' || key === 'twilio_auth_token' || key === 'email_api_key') && (value === '••••••••' || value === '')) continue;
       upsert.run(key, value);
     }
   });

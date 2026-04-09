@@ -296,6 +296,10 @@ const defaults = [
   ['twilio_whatsapp_from', 'whatsapp:+14155238886'],
   ['whatsapp_enabled', 'false'],
   ['upi_qr_image', ''],
+  ['email_provider', 'smtp'],   // 'smtp' | 'brevo' | 'resend'
+  ['email_api_key', ''],        // Brevo or Resend API key
+  ['email_from_name', 'Tritiya Dance Studio'],
+  ['email_from_address', ''],
 ];
 defaults.forEach(([k, v]) => upsert.run(k, v));
 
