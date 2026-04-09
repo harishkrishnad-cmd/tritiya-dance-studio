@@ -138,6 +138,17 @@ db.exec(`
     created_at TEXT DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS testimonials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    role TEXT DEFAULT '',
+    text TEXT NOT NULL,
+    stars INTEGER DEFAULT 5,
+    photo TEXT DEFAULT '',
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
   -- OTP tokens for email-based login
   CREATE TABLE IF NOT EXISTS otp_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -248,6 +259,10 @@ if (!cols.includes('student_email')) db.exec("ALTER TABLE students ADD COLUMN st
 if (!cols.includes('student_username')) db.exec("ALTER TABLE students ADD COLUMN student_username TEXT");
 if (!cols.includes('student_password_hash')) db.exec("ALTER TABLE students ADD COLUMN student_password_hash TEXT");
 if (!cols.includes('student_pin')) db.exec("ALTER TABLE students ADD COLUMN student_pin TEXT");
+if (!cols.includes('status')) db.exec("ALTER TABLE students ADD COLUMN status TEXT DEFAULT 'active'");
+// Sync existing active flag to new status column
+db.exec("UPDATE students SET status='active' WHERE active=1 AND (status IS NULL OR status='')");
+db.exec("UPDATE students SET status='inactive' WHERE active=0 AND (status IS NULL OR status='')");
 
 const upsert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
 const defaults = [
@@ -271,19 +286,18 @@ const defaults = [
   ['twilio_auth_token', ''],
   ['twilio_whatsapp_from', 'whatsapp:+14155238886'],
   ['whatsapp_enabled', 'false'],
+  ['upi_qr_image', ''],
 ];
 defaults.forEach(([k, v]) => upsert.run(k, v));
 
-// Pre-configure Gmail SMTP (only applies if value is currently empty)
-const setIfEmpty = db.prepare(`UPDATE settings SET value=? WHERE key=? AND (value='' OR value IS NULL)`);
-[
-  ['smtp_host',  'smtp.gmail.com'],
-  ['smtp_port',  '587'],
-  ['smtp_secure','false'],
-  ['smtp_user',  'tritiyadancestudio@gmail.com'],
-  ['smtp_pass',  'twuniawyazrrsrxt'],
-  ['email_from', 'Tritiya Dance Studio <tritiyadancestudio@gmail.com>'],
-].forEach(([k, v]) => setIfEmpty.run(v, k));
+// Ensure smtp_host and email metadata are set correctly
+const smtpMeta = db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`);
+smtpMeta.run('smtp_host', 'smtp.gmail.com');
+smtpMeta.run('smtp_port', '587');
+smtpMeta.run('smtp_secure', 'false');
+smtpMeta.run('email_from', 'Tritiya Dance Studio <tritiyadancestudio@gmail.com>');
+// Only set smtp_user if empty
+db.prepare(`UPDATE settings SET value=? WHERE key=? AND (value='' OR value IS NULL)`).run('tritiyadancestudio@gmail.com', 'smtp_user');
 
 // Website settings defaults
 const wupsert = db.prepare(`INSERT OR IGNORE INTO website_settings (key, value) VALUES (?, ?)`);
@@ -321,5 +335,16 @@ const webDefaults = [
   ['program4_desc', 'Classical Kuchipudi training alongside Bharatanatyam, exploring the expressive storytelling traditions of Andhra Pradesh.'],
 ];
 webDefaults.forEach(([k, v]) => wupsert.run(k, v));
+
+// Seed default testimonials if none exist
+const noTestimonials = db.prepare('SELECT COUNT(*) as cnt FROM testimonials').get().cnt === 0;
+if (noTestimonials) {
+  const insertT = db.prepare('INSERT INTO testimonials (name, role, text, stars, sort_order) VALUES (?, ?, ?, ?, ?)');
+  [
+    ['Priya Sharma', 'Parent · Beginner Batch', 'My daughter has blossomed under Revathi ma\'am\'s guidance. The patience and attention she gives every student is exceptional. Tritiya Dance Studio is a treasure.', 5, 0],
+    ['Ananya Reddy', 'Student · Intermediate', 'I\'ve been training here for 3 years and every class is a joy. The structured curriculum and ma\'am\'s deep knowledge of Bharatanatyam make every session meaningful.', 5, 1],
+    ['Kavitha Nair', 'Parent · Junior Batch', 'The discipline, the artistry, and the warmth of this studio is unmatched. My child looks forward to every class. Revathi ma\'am is truly inspiring.', 5, 2],
+  ].forEach(([name, role, text, stars, sort_order]) => insertT.run(name, role, text, stars, sort_order));
+}
 
 module.exports = db;

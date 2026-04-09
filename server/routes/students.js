@@ -6,10 +6,19 @@ const { hashPin } = require('./auth');
 
 // List all students
 router.get('/', (req, res) => {
-  const { active, search } = req.query;
+  const { active, status, search } = req.query;
   let query = `SELECT * FROM students WHERE 1=1`;
   const params = [];
-  if (active !== undefined) { query += ` AND active = ?`; params.push(active === 'true' ? 1 : 0); }
+  // New status filter takes priority over legacy active filter
+  if (status && status !== 'all') {
+    query += ` AND status = ?`; params.push(status);
+  } else if (!status && active !== undefined) {
+    // Legacy backward-compatible: active=true/false
+    query += ` AND active = ?`; params.push(active === 'true' ? 1 : 0);
+  } else if (!status && active === undefined) {
+    // Default: show active only
+    query += ` AND (status = 'active' OR status IS NULL)`;
+  }
   if (search) { query += ` AND (name LIKE ? OR parent_name LIKE ? OR parent_email LIKE ?)`; const s = `%${search}%`; params.push(s, s, s); }
   query += ` ORDER BY name`;
   res.json(db.prepare(query).all(...params));
@@ -38,7 +47,7 @@ router.get('/:id', (req, res) => {
 // Create student
 router.post('/', async (req, res) => {
   const { name, date_of_birth, level, enrollment_date, parent_name, parent_email,
-    parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password, student_email } = req.body;
+    parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password, student_email, status } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   // Auto-generate parent login if not provided
@@ -49,12 +58,13 @@ router.post('/', async (req, res) => {
   try {
     const result = db.prepare(`
       INSERT INTO students (name, date_of_birth, level, enrollment_date, parent_name, parent_email,
-        parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password_hash, parent_pin, student_email)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password_hash, parent_pin, student_email, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(name, date_of_birth, level || 'Beginner',
       enrollment_date || new Date().toISOString().split('T')[0],
       parent_name, parent_email, parent_phone, emergency_contact, address,
-      monthly_fee || 0, notes, username, passwordHash, password, student_email ? student_email.trim().toLowerCase() : null);
+      monthly_fee || 0, notes, username, passwordHash, password, student_email ? student_email.trim().toLowerCase() : null,
+      status || 'active');
 
     const student = db.prepare('SELECT * FROM students WHERE id = ?').get(result.lastInsertRowid);
     student._plain_password = password;
@@ -108,7 +118,7 @@ router.post('/bulk-import', async (req, res) => {
 // Update student
 router.put('/:id', (req, res) => {
   const { name, date_of_birth, level, enrollment_date, parent_name, parent_email,
-    parent_phone, emergency_contact, address, monthly_fee, notes, active, parent_username, parent_password } = req.body;
+    parent_phone, emergency_contact, address, monthly_fee, notes, active, parent_username, parent_password, status } = req.body;
 
   const current = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
   if (!current) return res.status(404).json({ error: 'Not found' });
@@ -116,15 +126,16 @@ router.put('/:id', (req, res) => {
   const passwordHash = parent_password ? hashPin(parent_password) : current.parent_password_hash;
   const pin = parent_password || current.parent_pin;
   const uname = parent_username || current.parent_username;
+  const newStatus = status || current.status || 'active';
 
   db.prepare(`
     UPDATE students SET name=?, date_of_birth=?, level=?, enrollment_date=?, parent_name=?, parent_email=?,
       parent_phone=?, emergency_contact=?, address=?, monthly_fee=?, notes=?, active=?,
-      parent_username=?, parent_password_hash=?, parent_pin=?
+      parent_username=?, parent_password_hash=?, parent_pin=?, status=?
     WHERE id=?
   `).run(name, date_of_birth, level, enrollment_date, parent_name, parent_email,
     parent_phone, emergency_contact, address, monthly_fee, notes, active !== undefined ? active : 1,
-    uname, passwordHash, pin, req.params.id);
+    uname, passwordHash, pin, newStatus, req.params.id);
 
   res.json(db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id));
 });

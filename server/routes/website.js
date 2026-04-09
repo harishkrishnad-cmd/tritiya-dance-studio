@@ -94,5 +94,39 @@ router.delete('/gallery/:id', authMiddleware, adminOnly, (req, res) => {
   }
 });
 
+// ── Testimonials (public GET, admin POST/PUT/DELETE) ──────────
+
+router.get('/testimonials', (req, res) => {
+  res.json(db.prepare('SELECT * FROM testimonials ORDER BY sort_order ASC, id ASC').all());
+});
+
+router.post('/testimonials', authMiddleware, adminOnly, (req, res) => {
+  const { name, role, text, stars, photo } = req.body;
+  if (!name || !text) return res.status(400).json({ error: 'name and text required' });
+  const maxRow = db.prepare('SELECT MAX(sort_order) as m FROM testimonials').get();
+  const order = (maxRow.m != null ? maxRow.m : -1) + 1;
+  const r = db.prepare('INSERT INTO testimonials (name, role, text, stars, photo, sort_order) VALUES (?, ?, ?, ?, ?, ?)').run(name, role || '', text, stars || 5, photo || '', order);
+  res.json(db.prepare('SELECT * FROM testimonials WHERE id=?').get(r.lastInsertRowid));
+});
+
+router.put('/testimonials/reorder', authMiddleware, adminOnly, (req, res) => {
+  const { order } = req.body;
+  if (!Array.isArray(order)) return res.status(400).json({ error: 'order must be array' });
+  const update = db.prepare('UPDATE testimonials SET sort_order=? WHERE id=?');
+  const tx = db.transaction((ids) => { ids.forEach((id, i) => update.run(i, id)); });
+  tx(order); res.json({ ok: true });
+});
+
+router.put('/testimonials/:id', authMiddleware, adminOnly, (req, res) => {
+  const { name, role, text, stars, photo } = req.body;
+  db.prepare('UPDATE testimonials SET name=?, role=?, text=?, stars=?, photo=? WHERE id=?').run(name, role || '', text, stars || 5, photo || '', req.params.id);
+  res.json(db.prepare('SELECT * FROM testimonials WHERE id=?').get(req.params.id));
+});
+
+router.delete('/testimonials/:id', authMiddleware, adminOnly, (req, res) => {
+  db.prepare('DELETE FROM testimonials WHERE id=?').run(req.params.id);
+  res.json({ ok: true });
+});
+
 
 module.exports = router;

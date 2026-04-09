@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import { api } from '../api';
 
 const LEVELS = ['Beginner', 'Primary', 'Junior', 'Intermediate', 'Senior', 'Advanced'];
-const empty = { name:'', date_of_birth:'', level:'Beginner', enrollment_date:new Date().toISOString().split('T')[0], parent_name:'', parent_email:'', parent_phone:'', emergency_contact:'', address:'', monthly_fee:'', notes:'', student_email:'' };
+const empty = { name:'', date_of_birth:'', level:'Beginner', enrollment_date:new Date().toISOString().split('T')[0], parent_name:'', parent_email:'', parent_phone:'', emergency_contact:'', address:'', monthly_fee:'', notes:'', student_email:'', status:'active' };
 
 function StudentForm({ data, onChange }) {
   return (
@@ -15,6 +15,13 @@ function StudentForm({ data, onChange }) {
         <div><label className="label">Dance Level</label><select className="input" value={data.level} onChange={e=>onChange('level',e.target.value)}>{LEVELS.map(l=><option key={l}>{l}</option>)}</select></div>
         <div><label className="label">Enrollment Date</label><input type="date" className="input" value={data.enrollment_date} onChange={e=>onChange('enrollment_date',e.target.value)} /></div>
         <div><label className="label">Monthly Fee (₹)</label><input type="number" className="input" value={data.monthly_fee} onChange={e=>onChange('monthly_fee',e.target.value)} placeholder="0" /></div>
+        <div><label className="label">Status</label>
+          <select className="input" value={data.status||'active'} onChange={e=>onChange('status',e.target.value)}>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="left">Left</option>
+          </select>
+        </div>
       </div>
       <div className="border-t border-apple-gray-2 pt-4">
         <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-3">Parent / Guardian</p>
@@ -134,7 +141,11 @@ function StudentRow({ student, onEdit, onDelete }) {
             </div>
           </div>
         </td>
-        <td className="px-4 py-3"><span className="text-xs bg-apple-gray text-apple-gray-5 px-2 py-0.5 rounded-full font-medium">{student.level}</span></td>
+        <td className="px-4 py-3">
+          <span className="text-xs bg-apple-gray text-apple-gray-5 px-2 py-0.5 rounded-full font-medium">{student.level}</span>
+          {student.status === 'left' && <span className="ml-1 text-xs bg-red-50 text-apple-red px-2 py-0.5 rounded-full font-medium">Left</span>}
+          {student.status === 'inactive' && <span className="ml-1 text-xs bg-orange-50 text-apple-orange px-2 py-0.5 rounded-full font-medium">Inactive</span>}
+        </td>
         <td className="px-4 py-3">
           <div className="text-sm text-apple-text">{student.parent_name||'—'}</div>
           {student.parent_email&&<div className="text-xs text-apple-gray-4 flex items-center gap-1"><Mail size={10}/>{student.parent_email}</div>}
@@ -204,12 +215,13 @@ export default function Students() {
   const [form, setForm] = useState(empty);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('active');
 
-  const load = useCallback(async () => { setLoading(true); setStudents(await api.getStudents({active:true})); setLoading(false); }, []);
+  const load = useCallback(async () => { setLoading(true); setStudents(await api.getStudents({status:statusFilter})); setLoading(false); }, [statusFilter]);
   useEffect(() => { load(); }, [load]);
 
   function openAdd() { setEditing(null); setForm(empty); setModalOpen(true); }
-  function openEdit(s) { setEditing(s); setForm({...empty,...s,monthly_fee:s.monthly_fee||''}); setModalOpen(true); }
+  function openEdit(s) { setEditing(s); setForm({...empty,...s,monthly_fee:s.monthly_fee||'',status:s.status||'active'}); setModalOpen(true); }
   async function handleSave() {
     if (!form.name.trim()) return alert('Student name is required');
     setSaving(true);
@@ -230,9 +242,15 @@ export default function Students() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-apple-text tracking-tight">Students</h1>
-          <p className="text-xs text-apple-gray-5 mt-0.5">{students.length} active</p>
+          <p className="text-xs text-apple-gray-5 mt-0.5">{students.length} {statusFilter === 'all' ? 'total' : statusFilter}</p>
         </div>
         <button onClick={openAdd} className="btn-primary flex items-center gap-1.5"><UserPlus size={14}/> Add Student</button>
+      </div>
+
+      <div className="flex gap-1.5 flex-wrap">
+        {[['active','Active'],['inactive','Inactive'],['left','Left'],['all','All']].map(([v,l])=>(
+          <button key={v} onClick={()=>setStatusFilter(v)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${statusFilter===v ? 'bg-apple-blue text-white' : 'bg-apple-gray-2 text-apple-gray-5 hover:bg-apple-gray'}`}>{l}</button>
+        ))}
       </div>
 
       <div className="relative">

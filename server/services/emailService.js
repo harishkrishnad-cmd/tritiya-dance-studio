@@ -7,11 +7,15 @@ function getSettings() {
 }
 
 function createTransporter(settings) {
+  const port = parseInt(settings.smtp_port) || 587;
+  const secure = settings.smtp_secure === 'true';
   return nodemailer.createTransport({
-    host: settings.smtp_host,
-    port: parseInt(settings.smtp_port) || 587,
-    secure: settings.smtp_secure === 'true',
+    host: settings.smtp_host || 'smtp.gmail.com',
+    port,
+    secure,
     auth: { user: settings.smtp_user, pass: settings.smtp_pass },
+    tls: { rejectUnauthorized: false },
+    ...(port === 587 && !secure ? { requireTLS: true } : {}),
   });
 }
 
@@ -89,6 +93,7 @@ async function sendWelcomeEmail(student, plainPassword) {
       ${appUrl ? `<div class="cred-row"><span class="cred-lbl">Portal URL</span><span class="cred-val">${appUrl}</span></div>` : ''}
     </div>
     <p style="font-size:13px;color:#86868b">Please keep these credentials safe. You can change your password after logging in.</p>
+    ${settings.upi_qr_image ? `<hr><p style="font-size:14px;font-weight:600;color:#1d1d1f;margin-bottom:8px">💳 Fee Payment via UPI</p><p style="font-size:13px;color:#6e6e73;margin-bottom:12px">Scan the QR code below to pay monthly fees:</p><div style="text-align:center;margin:16px 0"><img src="${settings.upi_qr_image}" alt="UPI QR Code" style="max-width:220px;border-radius:12px;border:1px solid #e8e8ed;padding:12px;background:#fff" /></div>` : ''}
     <p>With warm regards,<br><strong>${s}</strong></p>
   `);
   return sendEmail(student.parent_email, subject, html, student.id, 'welcome');
@@ -108,6 +113,7 @@ async function sendPaymentReminder(payment, student) {
     <div class="box"><div class="lbl">Due Date</div><div class="val">${new Date(payment.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>
     ${payment.description ? `<div class="box"><div class="lbl">Description</div><div class="val" style="font-size:15px">${payment.description}</div></div>` : ''}
     <p>Please make the payment at your earliest convenience.</p>
+    ${settings.upi_qr_image ? `<div style="text-align:center;margin:20px 0"><p style="font-size:14px;font-weight:600;color:#1d1d1f;margin-bottom:8px">💳 Pay via UPI</p><img src="${settings.upi_qr_image}" alt="UPI QR Code" style="max-width:200px;border-radius:12px;border:1px solid #e8e8ed;padding:10px;background:#fff" /></div>` : ''}
     ${payment.reminder_count > 0 ? `<p style="font-size:13px;color:#86868b">Reminder #${payment.reminder_count + 1}</p>` : ''}
     <p>Regards,<br><strong>${s}</strong></p>
   `);

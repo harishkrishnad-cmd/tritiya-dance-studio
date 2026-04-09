@@ -60,6 +60,8 @@ export default function Landing() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [data, setData] = useState(null);
   const [gallery, setGallery] = useState([]);
+  const [testimonials, setTestimonials] = useState([]);
+  const [testimonialIdx, setTestimonialIdx] = useState(0);
 
   useEffect(() => {
     fetch('/api/website/public')
@@ -69,7 +71,14 @@ export default function Landing() {
         setGallery(res.gallery && res.gallery.length > 0 ? res.gallery : DEFAULT_GALLERY);
       })
       .catch(() => setGallery(DEFAULT_GALLERY));
+    fetch('/api/website/testimonials').then(r => r.json()).then(setTestimonials).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (testimonials.length <= 1) return;
+    const t = setInterval(() => setTestimonialIdx(i => (i + 1) % testimonials.length), 5000);
+    return () => clearInterval(t);
+  }, [testimonials.length]);
 
   useEffect(() => {
     function onScroll() { setScrolled(window.scrollY > 60); }
@@ -264,6 +273,65 @@ export default function Landing() {
           </button>
         </div>
       </section>
+
+      {/* ── TESTIMONIALS ── */}
+      {testimonials.length > 0 && (
+      <section style={{ background: '#0d0d0f', padding: 'clamp(60px, 8vw, 100px) max(24px, calc((100vw - 1100px)/2))', overflow: 'hidden' }}>
+        <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.2em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 12 }}>Testimonials</p>
+        <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7', marginBottom: 48, lineHeight: 1.15 }}>Hear from our community.</h2>
+
+        <div style={{ position: 'relative', maxWidth: 720, margin: '0 auto' }}>
+          {/* Card */}
+          <div style={{ background: '#1c1c1e', borderRadius: 24, padding: 'clamp(28px, 5vw, 48px)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', minHeight: 220, transition: 'all 0.4s ease' }}>
+            {/* Stars */}
+            <div style={{ marginBottom: 20 }}>
+              {Array.from({ length: testimonials[testimonialIdx]?.stars || 5 }).map((_, i) => (
+                <span key={i} style={{ color: '#ffd60a', fontSize: 18, marginRight: 3 }}>★</span>
+              ))}
+            </div>
+            {/* Quote mark */}
+            <div style={{ fontSize: 60, color: 'rgba(245,245,247,0.08)', lineHeight: 1, marginBottom: -12, fontFamily: 'Georgia, serif' }}>"</div>
+            {/* Text */}
+            <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(245,245,247,0.85)', lineHeight: 1.75, fontStyle: 'italic', marginBottom: 28 }}>
+              {testimonials[testimonialIdx]?.text}
+            </p>
+            {/* Person */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              {testimonials[testimonialIdx]?.photo ? (
+                <img src={testimonials[testimonialIdx].photo} alt={testimonials[testimonialIdx].name}
+                  style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(245,245,247,0.1)' }} />
+              ) : (
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,245,247,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'rgba(245,245,247,0.6)' }}>
+                  {(testimonials[testimonialIdx]?.name || '?')[0]}
+                </div>
+              )}
+              <div>
+                <p style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7' }}>{testimonials[testimonialIdx]?.name}</p>
+                <p style={{ fontSize: 13, color: 'rgba(245,245,247,0.45)', marginTop: 2 }}>{testimonials[testimonialIdx]?.role}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          {testimonials.length > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {testimonials.map((_, i) => (
+                  <button key={i} onClick={() => setTestimonialIdx(i)}
+                    style={{ width: i === testimonialIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === testimonialIdx ? '#f5f5f7' : 'rgba(245,245,247,0.2)', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', padding: 0 }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => setTestimonialIdx(i => (i - 1 + testimonials.length) % testimonials.length)}
+                  style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(245,245,247,0.1)', border: '1px solid rgba(245,245,247,0.15)', color: '#f5f5f7', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+                <button onClick={() => setTestimonialIdx(i => (i + 1) % testimonials.length)}
+                  style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(245,245,247,0.1)', border: '1px solid rgba(245,245,247,0.15)', color: '#f5f5f7', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+      )}
 
       {/* ── CINEMATIC QUOTE ── */}
       <section style={{ position: 'relative', height: 'clamp(320px, 50vw, 600px)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -6,11 +6,12 @@ const token = () => localStorage.getItem('auth_token');
 const headers = () => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` });
 
 const TABS = [
-  { id: 'hero',     label: 'Hero',     icon: Star },
-  { id: 'about',    label: 'About',    icon: BookOpen },
-  { id: 'gallery',  label: 'Gallery',  icon: Image },
-  { id: 'programs', label: 'Programs', icon: Globe },
-  { id: 'contact',  label: 'Contact',  icon: Phone },
+  { id: 'hero',         label: 'Hero',         icon: Star },
+  { id: 'about',        label: 'About',        icon: BookOpen },
+  { id: 'gallery',      label: 'Gallery',      icon: Image },
+  { id: 'programs',     label: 'Programs',     icon: Globe },
+  { id: 'contact',      label: 'Contact',      icon: Phone },
+  { id: 'testimonials', label: 'Testimonials', icon: Star },
 ];
 
 function Toast({ msg, type }) {
@@ -385,6 +386,145 @@ function ContactEditor({ s, set }) {
   );
 }
 
+// ── TESTIMONIALS EDITOR ───────────────────────────────────────
+function TestimonialsEditor({ toast }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [newItem, setNewItem] = useState({ name: '', role: '', text: '', stars: 5, photo: '' });
+
+  useEffect(() => { load(); }, []);
+
+  async function load() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/testimonials`, { headers: headers() });
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch { toast('Failed to load testimonials', 'error'); }
+    setLoading(false);
+  }
+
+  async function save(item) {
+    setSaving(item.id);
+    try {
+      const res = await fetch(`${API}/testimonials/${item.id}`, { method: 'PUT', headers: headers(), body: JSON.stringify(item) });
+      if (!res.ok) throw new Error('Save failed');
+      const updated = await res.json();
+      setItems(prev => prev.map(t => t.id === item.id ? updated : t));
+      toast('Saved!', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+    setSaving(null);
+  }
+
+  async function add() {
+    if (!newItem.name || !newItem.text) { toast('Name and text are required', 'error'); return; }
+    try {
+      const res = await fetch(`${API}/testimonials`, { method: 'POST', headers: headers(), body: JSON.stringify(newItem) });
+      if (!res.ok) throw new Error('Failed to add');
+      const created = await res.json();
+      setItems(prev => [...prev, created]);
+      setNewItem({ name: '', role: '', text: '', stars: 5, photo: '' });
+      setAdding(false);
+      toast('Testimonial added!', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  async function remove(id) {
+    if (!confirm('Delete this testimonial?')) return;
+    try {
+      const res = await fetch(`${API}/testimonials/${id}`, { method: 'DELETE', headers: headers() });
+      if (!res.ok) throw new Error('Delete failed');
+      setItems(prev => prev.filter(t => t.id !== id));
+      toast('Deleted', 'success');
+    } catch (e) { toast(e.message, 'error'); }
+  }
+
+  function updateItem(id, field, value) {
+    setItems(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
+  }
+
+  const fieldStyle = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e8e8ed', fontSize: 13, color: '#1d1d1f', background: '#f5f5f7', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' };
+  const btnStyle = (color) => ({ padding: '8px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer', background: color === 'blue' ? '#0071e3' : color === 'red' ? '#ff3b30' : '#e8e8ed', color: color === 'gray' ? '#1d1d1f' : '#fff' });
+
+  if (loading) return <div style={{ textAlign: 'center', padding: 40, color: '#86868b' }}>Loading testimonials…</div>;
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <p style={{ fontSize: 14, color: '#86868b' }}>{items.length} testimonial{items.length !== 1 ? 's' : ''}</p>
+        <button onClick={() => setAdding(v => !v)} style={btnStyle('blue')}>
+          {adding ? 'Cancel' : '+ Add Testimonial'}
+        </button>
+      </div>
+
+      {adding && (
+        <div style={{ background: '#f5f5f7', borderRadius: 12, padding: 20, marginBottom: 20, border: '1px solid #e8e8ed' }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 16 }}>New Testimonial</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Name *</label>
+              <input style={fieldStyle} value={newItem.name} onChange={e => setNewItem(v => ({ ...v, name: e.target.value }))} placeholder="e.g. Priya Sharma" /></div>
+            <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Role</label>
+              <input style={fieldStyle} value={newItem.role} onChange={e => setNewItem(v => ({ ...v, role: e.target.value }))} placeholder="e.g. Parent · Beginner Batch" /></div>
+          </div>
+          <div style={{ marginBottom: 12 }}><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Testimonial Text *</label>
+            <textarea style={{ ...fieldStyle, resize: 'vertical' }} rows={3} value={newItem.text} onChange={e => setNewItem(v => ({ ...v, text: e.target.value }))} placeholder="What did they say?" /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+            <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Stars (1–5)</label>
+              <select style={fieldStyle} value={newItem.stars} onChange={e => setNewItem(v => ({ ...v, stars: parseInt(e.target.value) }))}>
+                {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} ★</option>)}
+              </select></div>
+            <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Photo URL (optional)</label>
+              <input style={fieldStyle} value={newItem.photo} onChange={e => setNewItem(v => ({ ...v, photo: e.target.value }))} placeholder="https://..." /></div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button onClick={() => setAdding(false)} style={btnStyle('gray')}>Cancel</button>
+            <button onClick={add} style={btnStyle('blue')}>Add Testimonial</button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', background: '#f5f5f7', borderRadius: 12, color: '#86868b' }}>
+          <p style={{ fontSize: 14 }}>No testimonials yet. Add your first one above.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {items.map(item => (
+            <div key={item.id} style={{ background: '#fff', borderRadius: 12, padding: 20, border: '1px solid #e8e8ed' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Name</label>
+                  <input style={fieldStyle} value={item.name || ''} onChange={e => updateItem(item.id, 'name', e.target.value)} /></div>
+                <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Role</label>
+                  <input style={fieldStyle} value={item.role || ''} onChange={e => updateItem(item.id, 'role', e.target.value)} placeholder="Parent · Beginner Batch" /></div>
+              </div>
+              <div style={{ marginBottom: 12 }}><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Text</label>
+                <textarea style={{ ...fieldStyle, resize: 'vertical' }} rows={3} value={item.text || ''} onChange={e => updateItem(item.id, 'text', e.target.value)} /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Stars</label>
+                  <select style={fieldStyle} value={item.stars || 5} onChange={e => updateItem(item.id, 'stars', parseInt(e.target.value))}>
+                    {[5,4,3,2,1].map(n => <option key={n} value={n}>{n} ★</option>)}
+                  </select></div>
+                <div><label style={{ fontSize: 11, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: 5 }}>Photo URL</label>
+                  <input style={fieldStyle} value={item.photo || ''} onChange={e => updateItem(item.id, 'photo', e.target.value)} placeholder="https://..." /></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button onClick={() => remove(item.id)} style={{ ...btnStyle('gray'), background: 'transparent', color: '#ff3b30', padding: '6px 0', fontSize: 13 }}>
+                  <Trash2 size={13} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />Delete
+                </button>
+                <button onClick={() => save(item)} disabled={saving === item.id} style={{ ...btnStyle('blue'), opacity: saving === item.id ? 0.7 : 1 }}>
+                  {saving === item.id ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── MAIN COMPONENT ────────────────────────────────────────────
 export default function WebsiteEditor() {
   const [activeTab, setActiveTab] = useState('hero');
@@ -467,14 +607,15 @@ export default function WebsiteEditor() {
 
       {/* Tab content */}
       <div style={{ background: '#fff', borderRadius: 14, padding: '24px 24px 32px', border: '1px solid #e8e8ed', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-        {activeTab === 'hero'     && <HeroEditor s={settings} set={setSetting} />}
-        {activeTab === 'about'    && <AboutEditor s={settings} set={setSetting} />}
-        {activeTab === 'gallery'  && <GalleryEditor gallery={gallery} setGallery={setGallery} toast={showToast} />}
-        {activeTab === 'programs' && <ProgramsEditor s={settings} set={setSetting} />}
-        {activeTab === 'contact'  && <ContactEditor s={settings} set={setSetting} />}
+        {activeTab === 'hero'         && <HeroEditor s={settings} set={setSetting} />}
+        {activeTab === 'about'        && <AboutEditor s={settings} set={setSetting} />}
+        {activeTab === 'gallery'      && <GalleryEditor gallery={gallery} setGallery={setGallery} toast={showToast} />}
+        {activeTab === 'programs'     && <ProgramsEditor s={settings} set={setSetting} />}
+        {activeTab === 'contact'      && <ContactEditor s={settings} set={setSetting} />}
+        {activeTab === 'testimonials' && <TestimonialsEditor toast={showToast} />}
 
         {/* Bottom save */}
-        {activeTab !== 'gallery' && (
+        {activeTab !== 'gallery' && activeTab !== 'testimonials' && (
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #f0f0f5', display: 'flex', justifyContent: 'flex-end' }}>
             <button onClick={save} disabled={saving}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '10px 24px', borderRadius: 8, background: '#0071e3', color: '#fff', border: 'none', fontSize: 14, fontWeight: 500, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>

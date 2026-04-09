@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Mail, Send, School, Bell, CheckCircle, XCircle, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Save, Mail, Send, School, Bell, CheckCircle, XCircle, MessageSquare, CreditCard } from 'lucide-react';
 import { api } from '../api';
 
 function Section({ title, icon: Icon, children }) {
@@ -27,6 +27,8 @@ export default function Settings({ onNameChange }) {
   const [waLoading,setWaLoading]=useState(false);
   const [waLogs,setWaLogs]=useState([]);
   const [waLogsLoaded,setWaLogsLoaded]=useState(false);
+  const [upiUrlInput, setUpiUrlInput] = useState('');
+  const upiFileRef = useRef();
 
   useEffect(()=>{ api.getSettings().then(d=>{ setS(d); setTestEmail(d.smtp_user||''); }); },[]);
   function set(key,val){ setS(v=>({...v,[key]:val})); setSaved(false); }
@@ -138,6 +140,35 @@ export default function Settings({ onNameChange }) {
               </div>
             </div>
           )}
+        </div>
+      </Section>
+
+      <Section title="Payment UPI QR Code" icon={CreditCard}>
+        <p className="text-xs text-apple-gray-4">Upload your UPI QR code — it will appear in welcome emails and payment reminders.</p>
+        {s.upi_qr_image && (
+          <div className="flex items-start gap-3">
+            <img src={s.upi_qr_image} alt="UPI QR" className="w-32 h-32 object-contain border border-apple-gray-2 rounded-apple-sm bg-white p-2" />
+            <button onClick={() => set('upi_qr_image', '')} className="text-xs text-apple-red hover:underline mt-1">Remove</button>
+          </div>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="label">Paste Image URL</label>
+            <div className="flex gap-2">
+              <input className="input flex-1" placeholder="https://..." value={upiUrlInput} onChange={e => setUpiUrlInput(e.target.value)} />
+              <button className="btn-secondary text-xs" onClick={() => { if(upiUrlInput.trim()) { set('upi_qr_image', upiUrlInput.trim()); setUpiUrlInput(''); } }}>Set</button>
+            </div>
+          </div>
+          <div>
+            <label className="label">Upload from Device</label>
+            <input type="file" accept="image/*" ref={upiFileRef} style={{display:'none'}} onChange={e => {
+              const file = e.target.files[0]; if(!file) return;
+              const reader = new FileReader();
+              reader.onload = ev => set('upi_qr_image', ev.target.result);
+              reader.readAsDataURL(file);
+            }} />
+            <button className="btn-secondary w-full text-xs" onClick={() => upiFileRef.current.click()}>📁 Choose Image</button>
+          </div>
         </div>
       </Section>
 
