@@ -59,8 +59,8 @@ export default function App() {
     return <Landing />;
   }
 
-  // Student learning portal at /student
-  if (location.pathname.startsWith('/student')) {
+  // Student learning portal at /student (exact — must NOT match /students admin route)
+  if (location.pathname === '/student' || location.pathname.startsWith('/student/')) {
     return <StudentPortal />;
   }
 

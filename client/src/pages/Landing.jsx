@@ -426,9 +426,9 @@ export default function Landing() {
             onMouseEnter={e => e.currentTarget.style.background='rgba(245,245,247,0.18)'} onMouseLeave={e => e.currentTarget.style.background='rgba(245,245,247,0.1)'}>
             Parent Portal
           </a>
-          <a href="/login" style={{ padding: '13px 26px', borderRadius: 980, fontSize: 14, fontWeight: 500, background: '#f5f5f7', color: '#0a0a0a', textDecoration: 'none', transition: 'opacity 0.2s' }}
+          <a href="/student" style={{ padding: '13px 26px', borderRadius: 980, fontSize: 14, fontWeight: 500, background: '#f5f5f7', color: '#0a0a0a', textDecoration: 'none', transition: 'opacity 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-            Studio Admin
+            Student Portal
           </a>
         </div>
       </section>
@@ -444,7 +444,7 @@ export default function Landing() {
           <div style={{ display: 'flex', gap: 24 }}>
             <a href={`tel:${s('contact_phone',data)}`} style={{ fontSize: 12, color: 'rgba(245,245,247,0.35)', textDecoration: 'none' }}>{s('contact_phone',data)}</a>
             <a href="/parent" style={{ fontSize: 12, color: 'rgba(245,245,247,0.35)', textDecoration: 'none' }}>Parent Portal</a>
-            <a href="/login" style={{ fontSize: 12, color: 'rgba(245,245,247,0.35)', textDecoration: 'none' }}>Admin</a>
+            <a href="/student" style={{ fontSize: 12, color: 'rgba(245,245,247,0.35)', textDecoration: 'none' }}>Student Portal</a>
           </div>
         </div>
       </footer>
