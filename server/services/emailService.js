@@ -14,6 +14,9 @@ function createTransporter(settings) {
     port,
     secure,
     auth: { user: settings.smtp_user, pass: settings.smtp_pass },
+    connectionTimeout: 10000,   // fail after 10s instead of hanging
+    socketTimeout: 15000,
+    greetingTimeout: 10000,
     tls: { rejectUnauthorized: false },
     ...(port === 587 && !secure ? { requireTLS: true } : {}),
   });

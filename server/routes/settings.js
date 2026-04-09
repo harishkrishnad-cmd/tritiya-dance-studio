@@ -40,6 +40,10 @@ router.post('/test-ethereal', async (req, res) => {
       port: 587,
       secure: false,
       auth: { user: testAccount.user, pass: testAccount.pass },
+      connectionTimeout: 10000,
+      socketTimeout: 15000,
+      greetingTimeout: 10000,
+      tls: { rejectUnauthorized: false },
     });
     const settings = db.prepare('SELECT key, value FROM settings').all().reduce((a,{key,value})=>({...a,[key]:value}),{});
     const schoolName = settings.school_name || 'Tritiya Dance Studio';
