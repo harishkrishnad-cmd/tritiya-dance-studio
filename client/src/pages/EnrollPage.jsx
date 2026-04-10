@@ -195,52 +195,52 @@ export default function EnrollPage() {
                       <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>Opens app with ₹1,000 pre-filled</p>
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {[
-                      { label: 'Google Pay', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#34A853)', href: `tez://upi/pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
-                      { label: 'PhonePe',    icon: 'P', bg: '#5f259f',                                  href: `phonepe://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
-                      { label: 'Paytm',      icon: 'T', bg: '#00BAF2',                                  href: `paytmmp://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
+                      { label: 'Google Pay', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg', logoBg: '#fff', href: `tez://upi/pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
+                      { label: 'PhonePe',    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg',   logoBg: '#fff', href: `phonepe://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
+                      { label: 'Paytm',      logo: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg', logoBg: '#00BAF2', href: `paytmmp://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
                     ].map(app => (
-                      <a key={app.label} href={app.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 4px', background: '#f9f9f9', border: '1px solid #e8e8ed', borderRadius: 12, textDecoration: 'none' }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 9, background: app.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 }}>{app.icon}</div>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>{app.label}</span>
+                      <a key={app.label} href={app.href} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: '#f9f9f9', border: '1px solid #e8e8ed', borderRadius: 12, textDecoration: 'none' }}>
+                        <div style={{ width: 68, height: 32, background: app.logoBg, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px', boxSizing: 'border-box', border: '1px solid #eee', flexShrink: 0 }}>
+                          <img src={app.logo} alt={app.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>Pay ₹1,000 with {app.label}</span>
+                        <span style={{ marginLeft: 'auto', fontSize: 16, color: '#0071e3' }}>›</span>
                       </a>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Option 3: Auto-Pay (like Netflix) */}
-              {info.upi_vpa && (
-                <div style={{ border: '2px solid #d0e8ff', borderRadius: 14, padding: 16, marginBottom: 20, background: '#f8fbff' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#e0f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>🔄</div>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', margin: 0 }}>Option 3 — Auto-Pay <span style={{ background: '#0071e3', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, marginLeft: 4, verticalAlign: 'middle' }}>Like Netflix</span></p>
-                      <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>Set once — ₹1,000 auto-debited every month</p>
-                    </div>
+              {/* Option 3: Auto-Pay (like Netflix) — display only, no active links */}
+              <div style={{ border: '2px solid #d0e8ff', borderRadius: 14, padding: 16, marginBottom: 20, background: '#f8fbff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 8, background: '#e0f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>🔄</div>
+                  <div>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', margin: 0 }}>Option 3 — Auto-Pay <span style={{ background: '#0071e3', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, marginLeft: 4, verticalAlign: 'middle' }}>Like Netflix</span></p>
+                    <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>Set once — ₹1,000 auto-debited every month</p>
                   </div>
-                  <p style={{ fontSize: 11, color: '#555', marginBottom: 12, lineHeight: 1.6, marginTop: 8 }}>
-                    Your UPI app will ask permission once and then auto-debit ₹1,000 every month — no manual payment needed.
-                  </p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                    {[
-                      { label: 'Google Pay', icon: 'G', bg: 'linear-gradient(135deg,#4285F4,#34A853)', href: `tez://upi/mandate?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M` },
-                      { label: 'PhonePe',    icon: 'P', bg: '#5f259f',                                  href: `phonepe://mandate?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M` },
-                      { label: 'Paytm',      icon: 'T', bg: '#00BAF2',                                  href: `paytmmp://mandate?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M` },
-                    ].map(app => (
-                      <a key={app.label} href={app.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, padding: '10px 4px', background: '#fff', border: '1px solid #d0e8ff', borderRadius: 12, textDecoration: 'none' }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 9, background: app.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 16 }}>{app.icon}</div>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>{app.label}</span>
-                        <span style={{ fontSize: 9, color: '#0071e3', fontWeight: 600 }}>Auto-Pay</span>
-                      </a>
-                    ))}
-                  </div>
-                  <p style={{ fontSize: 10, color: '#86868b', textAlign: 'center', marginTop: 10, lineHeight: 1.5 }}>
-                    UPI ID: <strong style={{ color: '#555' }}>{info.upi_vpa}</strong>
-                  </p>
                 </div>
-              )}
+                <p style={{ fontSize: 11, color: '#555', marginBottom: 12, lineHeight: 1.6, marginTop: 8 }}>
+                  Pay once and your UPI app auto-debits ₹1,000 every month — no manual payment needed.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {[
+                    { label: 'Google Pay', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg', logoBg: '#fff' },
+                    { label: 'PhonePe',    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg',   logoBg: '#fff' },
+                    { label: 'Paytm',      logo: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg', logoBg: '#00BAF2' },
+                  ].map(app => (
+                    <div key={app.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: '#f0f6ff', border: '1px solid #d0e8ff', borderRadius: 12, opacity: 0.65 }}>
+                      <div style={{ width: 68, height: 32, background: app.logoBg, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px', boxSizing: 'border-box', border: '1px solid #eee', flexShrink: 0 }}>
+                        <img src={app.logo} alt={app.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#86868b' }}>{app.label}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: 11, color: '#86868b', background: '#d0e8ff', padding: '2px 8px', borderRadius: 20, fontWeight: 500, whiteSpace: 'nowrap' }}>Coming soon</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
               {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: paid ? '#f0fff4' : '#f5f5f7', border: `1px solid ${paid ? '#34c759' : '#e8e8ed'}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, cursor: 'pointer', transition: 'all 0.2s' }}>
                 <input type="checkbox" checked={paid} onChange={e => setPaid(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#34c759', cursor: 'pointer' }} />
