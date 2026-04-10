@@ -1,7 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Send, ChevronLeft, ChevronRight, BookOpen, CheckCircle, Clock, MessageSquare, Mail } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Send, ChevronLeft, ChevronRight, BookOpen, CheckCircle, Clock, MessageSquare, Mail, FileSpreadsheet, Upload, Download, X, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { api } from '../api';
 import Modal from '../components/Modal';
+
+const LP_IMPORT_COLS = [
+  { key: 'class_name', label: 'Class Name' },
+  { key: 'plan_date', label: 'Date (YYYY-MM-DD)' },
+  { key: 'subject', label: 'Subject' },
+  { key: 'topic', label: 'Topic' },
+  { key: 'description', label: 'Description' },
+  { key: 'homework', label: 'Homework' },
+  { key: 'duration_minutes', label: 'Duration (Minutes)' },
+];
+
+function downloadLPTemplate() {
+  const ws = XLSX.utils.aoa_to_sheet([
+    LP_IMPORT_COLS.map(c => c.label),
+    ['Beginners Bharatanatyam', '2026-04-14', 'Adavus (Basic Steps)', 'Natta Adavu — 8 counts', 'Introduction to basic footwork', 'Practice 10 min daily', '60'],
+    ['Intermediate Kuchipudi', '2026-04-16', 'Jathis', 'Tisra Jathi', 'Advanced rhythmic patterns', '', '90'],
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Lesson Plans');
+  XLSX.writeFile(wb, 'lesson_plans_template.xlsx');
+}
 
 const SUBJECTS = [
   'Adavus (Basic Steps)', 'Jathis', 'Alarippu', 'Jatiswaram', 'Shabdam',
@@ -27,6 +49,13 @@ export default function LessonPlanner() {
   const [notifyingId, setNotifyingId] = useState(null);
   const [notifyResult, setNotifyResult] = useState({});
   const [form, setForm] = useState({ class_id: '', plan_date: '', subject: '', topic: '', description: '', homework: '', duration_minutes: '60' });
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState([]);
+  const [importErrors, setImportErrors] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef();
 
   useEffect(() => { api.getClasses().then(setClasses); }, []);
   useEffect(() => { load(); }, [filterClass, month, year]);
@@ -62,6 +91,54 @@ export default function LessonPlanner() {
     setNotifyingId(null);
   }
 
+  function parseImportFile(file) {
+    setImportResult(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const normalised = raw.map(r => {
+        const out = {};
+        for (const [k, v] of Object.entries(r)) {
+          const key = k.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
+          const col = LP_IMPORT_COLS.find(c => c.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '') === key || c.key === key);
+          if (col) out[col.key] = String(v).trim();
+        }
+        return out;
+      }).filter(r => r.plan_date && r.subject);
+      const errs = [];
+      normalised.forEach((r, i) => {
+        if (!r.plan_date) errs.push(`Row ${i+2}: Date is required`);
+        if (!r.subject) errs.push(`Row ${i+2}: Subject is required`);
+        if (!r.class_name) errs.push(`Row ${i+2}: Class Name is required`);
+      });
+      setImportRows(normalised);
+      setImportErrors(errs);
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  function handleImportFile(file) {
+    if (!file) return;
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) { alert('Please upload an Excel or CSV file'); return; }
+    parseImportFile(file);
+  }
+
+  async function doImport() {
+    if (!importRows.length || importErrors.length) return;
+    setImporting(true);
+    try {
+      const r = await api.bulkImportLessonPlans(importRows);
+      setImportResult({ success: true, count: r.imported, skipped: r.skipped });
+      setImportRows([]);
+      load();
+    } catch (e) {
+      setImportResult({ success: false, error: e.message });
+    }
+    setImporting(false);
+  }
+
   const monthName = new Date(year, month - 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
   // Group by date
@@ -78,9 +155,10 @@ export default function LessonPlanner() {
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-xl font-semibold text-apple-text tracking-tight">Lesson Planner</h1>
-        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5">
-          <Plus size={14}/> Add Lesson Plan
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setImportOpen(true); setImportRows([]); setImportErrors([]); setImportResult(null); }} className="btn-secondary flex items-center gap-1.5 text-sm"><FileSpreadsheet size={13}/> Import Excel</button>
+          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-1.5"><Plus size={14}/> Add Lesson Plan</button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -154,8 +232,74 @@ export default function LessonPlanner() {
         </div>
       )}
 
+      {/* Import Modal */}
+      <Modal isOpen={importOpen} onClose={() => setImportOpen(false)} title="Import Lesson Plans from Excel" size="lg">
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <button onClick={downloadLPTemplate} className="btn-secondary flex items-center gap-1.5 text-xs"><Download size={12}/> Download Template</button>
+          </div>
+          {importResult && (
+            <div className={`flex items-start gap-3 p-3 rounded-apple-sm ${importResult.success ? 'bg-green-50 border-l-4 border-apple-green' : 'bg-red-50 border-l-4 border-apple-red'}`}>
+              {importResult.success
+                ? <><CheckCircle size={16} className="text-apple-green shrink-0 mt-0.5"/><div><p className="font-medium text-apple-text text-sm">{importResult.count} plan{importResult.count !== 1 ? 's' : ''} imported</p>{importResult.skipped > 0 && <p className="text-xs text-apple-gray-5">{importResult.skipped} skipped (missing class name or required fields)</p>}</div></>
+                : <><AlertCircle size={16} className="text-apple-red shrink-0 mt-0.5"/><p className="text-sm text-apple-text">{importResult.error}</p></>}
+            </div>
+          )}
+          {!importRows.length ? (
+            <div
+              className={`border-2 border-dashed rounded-apple-sm text-center py-10 cursor-pointer transition-all ${dragOver ? 'border-apple-blue bg-blue-50' : 'border-apple-gray-2 hover:border-apple-blue/40'}`}
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => { e.preventDefault(); setDragOver(false); handleImportFile(e.dataTransfer.files[0]); }}
+              onClick={() => fileRef.current?.click()}
+            >
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => handleImportFile(e.target.files[0])} />
+              <FileSpreadsheet size={32} className="mx-auto text-apple-blue mb-2 opacity-70"/>
+              <p className="font-medium text-apple-text text-sm">Drop your Excel file here or click to browse</p>
+              <p className="text-xs text-apple-gray-4 mt-1">Columns: Class Name, Date, Subject, Topic, Description, Homework, Duration</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-apple-text">{importRows.length} plan{importRows.length !== 1 ? 's' : ''} ready to import</p>
+                <button onClick={() => { setImportRows([]); setImportErrors([]); }} className="text-xs text-apple-gray-4 hover:text-apple-red flex items-center gap-1"><X size={12}/> Clear</button>
+              </div>
+              {importErrors.length > 0 && (
+                <div className="bg-orange-50 border-l-4 border-apple-orange p-3 rounded-apple-sm space-y-1">
+                  <p className="text-xs font-medium text-apple-text">{importErrors.length} issue{importErrors.length !== 1 ? 's' : ''} found</p>
+                  {importErrors.map((e, i) => <p key={i} className="text-xs text-apple-gray-5">• {e}</p>)}
+                </div>
+              )}
+              <div className="overflow-x-auto border border-apple-gray-2 rounded-apple-sm">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-apple-gray border-b border-apple-gray-2">
+                    {['Class','Date','Subject','Topic','Duration'].map(h => <th key={h} className="text-left px-3 py-2 text-apple-gray-5 font-semibold uppercase text-[10px] whitespace-nowrap">{h}</th>)}
+                  </tr></thead>
+                  <tbody className="divide-y divide-apple-gray-2/60">
+                    {importRows.slice(0, 15).map((r, i) => (
+                      <tr key={i} className="hover:bg-apple-gray/40">
+                        <td className="px-3 py-2 text-apple-text">{r.class_name || '—'}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.plan_date}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.subject}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.topic || '—'}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.duration_minutes || '60'} min</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {importRows.length > 15 && <p className="text-xs text-apple-gray-5 px-3 py-2 border-t border-apple-gray-2">… and {importRows.length - 15} more</p>}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-apple-gray-2">
+          <button className="btn-secondary" onClick={() => setImportOpen(false)}>Cancel</button>
+          {importRows.length > 0 && <button className="btn-primary flex items-center gap-1.5" onClick={doImport} disabled={importing || importErrors.length > 0}><Upload size={13}/>{importing ? 'Importing…' : `Import ${importRows.length} Plans`}</button>}
+        </div>
+      </Modal>
+
       {/* Create Modal */}
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Add Lesson Plan">
+      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title="Add Lesson Plan">
         <form onSubmit={handleCreate} className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

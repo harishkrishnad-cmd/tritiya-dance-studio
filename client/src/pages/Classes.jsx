@@ -1,11 +1,34 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Edit2, Trash2, UserPlus, UserMinus, Users, Clock } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, Edit2, Trash2, UserPlus, UserMinus, Users, Clock, Upload, FileSpreadsheet, Download, X, CheckCircle, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import Modal from '../components/Modal';
 import { api } from '../api';
 
 const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 const LEVELS = ['All','Beginner','Primary','Junior','Intermediate','Senior','Advanced'];
 const empty = { name:'', day_of_week:'Monday', start_time:'16:00', end_time:'17:30', level:'All', description:'', max_students:20 };
+
+const CLASS_IMPORT_COLS = [
+  { key: 'name', label: 'Class Name' },
+  { key: 'day_of_week', label: 'Day of Week' },
+  { key: 'start_time', label: 'Start Time (HH:MM)' },
+  { key: 'end_time', label: 'End Time (HH:MM)' },
+  { key: 'level', label: 'Level' },
+  { key: 'max_students', label: 'Max Students' },
+  { key: 'description', label: 'Description' },
+];
+
+function downloadClassTemplate() {
+  const ws = XLSX.utils.aoa_to_sheet([
+    CLASS_IMPORT_COLS.map(c => c.label),
+    ['Beginners Bharatanatyam', 'Monday', '16:00', '17:30', 'Beginner', '15', 'Foundation level class'],
+    ['Intermediate Kuchipudi', 'Wednesday', '17:00', '18:30', 'Intermediate', '12', ''],
+    ['Advanced Varnam', 'Saturday', '09:00', '11:00', 'Advanced', '10', 'Performance preparation'],
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Classes');
+  XLSX.writeFile(wb, 'classes_template.xlsx');
+}
 
 export default function Classes() {
   const [classes, setClasses] = useState([]);
@@ -16,6 +39,13 @@ export default function Classes() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [available, setAvailable] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState([]);
+  const [importErrors, setImportErrors] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef();
 
   const load = useCallback(async()=>{ setClasses(await api.getClasses()); },[]);
   useEffect(()=>{ load(); },[load]);
@@ -47,16 +77,68 @@ export default function Classes() {
     setDetail(d); setAvailable(avail);
   }
 
+  function parseImportFile(file) {
+    setImportResult(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const normalised = raw.map(r => {
+        const out = {};
+        for (const [k, v] of Object.entries(r)) {
+          const key = k.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
+          const col = CLASS_IMPORT_COLS.find(c => c.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '') === key || c.key === key);
+          if (col) out[col.key] = String(v).trim();
+        }
+        return out;
+      }).filter(r => r.name);
+      const errs = [];
+      normalised.forEach((r, i) => {
+        if (!r.name) errs.push(`Row ${i+2}: Class Name is required`);
+        if (!r.day_of_week) errs.push(`Row ${i+2}: Day of Week is required`);
+        if (!r.start_time) errs.push(`Row ${i+2}: Start Time is required`);
+        if (!r.end_time) errs.push(`Row ${i+2}: End Time is required`);
+      });
+      setImportRows(normalised);
+      setImportErrors(errs);
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  function handleImportFile(file) {
+    if (!file) return;
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) { alert('Please upload an Excel or CSV file'); return; }
+    parseImportFile(file);
+  }
+
+  async function doImport() {
+    if (!importRows.length || importErrors.length) return;
+    setImporting(true);
+    try {
+      const r = await api.bulkImportClasses(importRows);
+      setImportResult({ success: true, count: r.imported, skipped: r.skipped });
+      setImportRows([]);
+      load();
+    } catch (e) {
+      setImportResult({ success: false, error: e.message });
+    }
+    setImporting(false);
+  }
+
   const today = new Date().toLocaleDateString('en-US',{weekday:'long'});
 
   return (
     <div className="space-y-4 max-w-5xl">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-xl font-semibold text-apple-text tracking-tight">Classes</h1>
           <p className="text-xs text-apple-gray-5 mt-0.5">{classes.length} active</p>
         </div>
-        <button onClick={openAdd} className="btn-primary flex items-center gap-1.5"><Plus size={14}/> New Class</button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setImportOpen(true); setImportRows([]); setImportErrors([]); setImportResult(null); }} className="btn-secondary flex items-center gap-1.5 text-sm"><FileSpreadsheet size={13}/> Import Excel</button>
+          <button onClick={openAdd} className="btn-primary flex items-center gap-1.5"><Plus size={14}/> New Class</button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -114,6 +196,73 @@ export default function Classes() {
         <div className="flex justify-end gap-2 mt-5 pt-4 border-t border-apple-gray-2">
           <button className="btn-secondary" onClick={()=>setModalOpen(false)}>Cancel</button>
           <button className="btn-primary" onClick={handleSave} disabled={saving}>{saving?'Saving…':editing?'Save Changes':'Create Class'}</button>
+        </div>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal isOpen={importOpen} onClose={() => setImportOpen(false)} title="Import Classes from Excel" size="lg">
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <button onClick={downloadClassTemplate} className="btn-secondary flex items-center gap-1.5 text-xs"><Download size={12}/> Download Template</button>
+          </div>
+          {importResult && (
+            <div className={`flex items-start gap-3 p-3 rounded-apple-sm ${importResult.success ? 'bg-green-50 border-l-4 border-apple-green' : 'bg-red-50 border-l-4 border-apple-red'}`}>
+              {importResult.success
+                ? <><CheckCircle size={16} className="text-apple-green shrink-0 mt-0.5"/><div><p className="font-medium text-apple-text text-sm">{importResult.count} class{importResult.count !== 1 ? 'es' : ''} imported</p>{importResult.skipped > 0 && <p className="text-xs text-apple-gray-5">{importResult.skipped} skipped (duplicates)</p>}</div></>
+                : <><AlertCircle size={16} className="text-apple-red shrink-0 mt-0.5"/><p className="text-sm text-apple-text">{importResult.error}</p></>}
+            </div>
+          )}
+          {!importRows.length ? (
+            <div
+              className={`border-2 border-dashed rounded-apple-sm text-center py-10 cursor-pointer transition-all ${dragOver ? 'border-apple-blue bg-blue-50' : 'border-apple-gray-2 hover:border-apple-blue/40'}`}
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => { e.preventDefault(); setDragOver(false); handleImportFile(e.dataTransfer.files[0]); }}
+              onClick={() => fileRef.current?.click()}
+            >
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => handleImportFile(e.target.files[0])} />
+              <FileSpreadsheet size={32} className="mx-auto text-apple-blue mb-2 opacity-70"/>
+              <p className="font-medium text-apple-text text-sm">Drop your Excel file here or click to browse</p>
+              <p className="text-xs text-apple-gray-4 mt-1">Columns: Class Name, Day of Week, Start Time, End Time, Level, Max Students</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-apple-text">{importRows.length} class{importRows.length !== 1 ? 'es' : ''} ready to import</p>
+                <button onClick={() => { setImportRows([]); setImportErrors([]); }} className="text-xs text-apple-gray-4 hover:text-apple-red flex items-center gap-1"><X size={12}/> Clear</button>
+              </div>
+              {importErrors.length > 0 && (
+                <div className="bg-orange-50 border-l-4 border-apple-orange p-3 rounded-apple-sm space-y-1">
+                  <p className="text-xs font-medium text-apple-text">{importErrors.length} issue{importErrors.length !== 1 ? 's' : ''} found</p>
+                  {importErrors.map((e, i) => <p key={i} className="text-xs text-apple-gray-5">• {e}</p>)}
+                </div>
+              )}
+              <div className="overflow-x-auto border border-apple-gray-2 rounded-apple-sm">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-apple-gray border-b border-apple-gray-2">
+                    {['Name','Day','Start','End','Level','Max'].map(h => <th key={h} className="text-left px-3 py-2 text-apple-gray-5 font-semibold uppercase text-[10px] whitespace-nowrap">{h}</th>)}
+                  </tr></thead>
+                  <tbody className="divide-y divide-apple-gray-2/60">
+                    {importRows.slice(0, 15).map((r, i) => (
+                      <tr key={i} className="hover:bg-apple-gray/40">
+                        <td className="px-3 py-2 text-apple-text">{r.name}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.day_of_week}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.start_time}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.end_time}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.level || '—'}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.max_students || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {importRows.length > 15 && <p className="text-xs text-apple-gray-5 px-3 py-2 border-t border-apple-gray-2">… and {importRows.length - 15} more</p>}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-apple-gray-2">
+          <button className="btn-secondary" onClick={() => setImportOpen(false)}>Cancel</button>
+          {importRows.length > 0 && <button className="btn-primary flex items-center gap-1.5" onClick={doImport} disabled={importing || importErrors.length > 0}><Upload size={13}/>{importing ? 'Importing…' : `Import ${importRows.length} Classes`}</button>}
         </div>
       </Modal>
 

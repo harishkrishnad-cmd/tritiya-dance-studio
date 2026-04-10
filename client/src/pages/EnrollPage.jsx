@@ -169,12 +169,28 @@ export default function EnrollPage() {
                 </div>
               </div>
               {info.upi_qr_image && (
-                <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{ textAlign: 'center', marginBottom: 16 }}>
                   <p style={{ fontSize: 14, fontWeight: 600, color: '#1d1d1f', marginBottom: 4 }}>💳 First Payment via UPI</p>
                   <p style={{ fontSize: 12, color: '#86868b', marginBottom: 12 }}>Scan with PhonePe, Google Pay, Paytm, or any UPI app</p>
                   <img src={info.upi_qr_image} alt="UPI QR" style={{ width: 180, height: 180, objectFit: 'contain', borderRadius: 12, border: '1px solid #e8e8ed', padding: 8, background: '#fff', margin: '0 auto', display: 'block' }} />
                 </div>
               )}
+              {/* UPI AutoPay */}
+              <div style={{ background: '#f0f7ff', border: '1px solid #d0e8ff', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', marginBottom: 4 }}>🔄 Set Up Monthly Auto-Payment</p>
+                <p style={{ fontSize: 12, color: '#555', marginBottom: 12, lineHeight: 1.6 }}>
+                  Like Netflix — set up a recurring ₹1,000/month so you never miss a payment. Your UPI app auto-debits on the same day every month.
+                </p>
+                <a
+                  href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
+                  style={{ display: 'block', width: '100%', padding: '11px 16px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none', marginBottom: 10, boxSizing: 'border-box' }}>
+                  🔄 Set Up Auto-Pay — ₹1,000/month
+                </a>
+                <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', lineHeight: 1.5 }}>
+                  Opens your UPI app (Google Pay / PhonePe / Paytm) to authorize a monthly recurring payment.<br/>
+                  UPI ID: <strong>9398350275@upi</strong> · Amount: ₹1,000/month
+                </p>
+              </div>
               {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: paid ? '#f0fff4' : '#f5f5f7', border: `1px solid ${paid ? '#34c759' : '#e8e8ed'}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, cursor: 'pointer', transition: 'all 0.2s' }}>
                 <input type="checkbox" checked={paid} onChange={e => setPaid(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#34c759', cursor: 'pointer' }} />

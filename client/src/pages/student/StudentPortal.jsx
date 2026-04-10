@@ -80,16 +80,18 @@ function StudentLogin({ onLogin }) {
           </div>
           {captcha && (
             <div style={{ marginBottom: 20 }}>
-              <label style={lbl}>Security Check — What is {captcha.question}?</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input value={captchaAnswer} onChange={e => setCaptchaAnswer(e.target.value)}
-                  type="number" placeholder="Answer" min="0" max="99"
-                  onKeyDown={e => e.key === 'Enter' && login()}
-                  style={{ ...inp, flex: 1 }} />
+              <label style={lbl}>Security Check — Type the characters shown</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <img src={captcha.image_url} alt="CAPTCHA" style={{ height: 48, borderRadius: 8, border: '1px solid #e8e8ed', background: '#f0f0f0' }} />
                 <button onClick={loadCaptcha}
                   style={{ padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', background: '#f5f5f7', cursor: 'pointer', fontSize: 14, color: '#0071e3' }}
-                  title="Get new question">↺</button>
+                  title="Refresh CAPTCHA">↺</button>
               </div>
+              <input value={captchaAnswer} onChange={e => setCaptchaAnswer(e.target.value)}
+                type="text" placeholder="Enter characters above" maxLength={5}
+                autoComplete="off" autoCorrect="off" spellCheck="false"
+                onKeyDown={e => e.key === 'Enter' && login()}
+                style={{ ...inp, textTransform: 'uppercase', letterSpacing: '0.15em' }} />
             </div>
           )}
           <button onClick={login} disabled={loading || !username.trim() || !password.trim() || !captchaAnswer.trim()}

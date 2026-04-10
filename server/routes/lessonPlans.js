@@ -36,6 +36,30 @@ router.get('/:id', (req, res) => {
   res.json(plan);
 });
 
+// Bulk import lesson plans from Excel
+router.post('/bulk-import', (req, res) => {
+  const { plans: rows } = req.body;
+  if (!Array.isArray(rows)) return res.status(400).json({ error: 'plans must be an array' });
+  let imported = 0, skipped = 0;
+  const insert = db.prepare('INSERT INTO lesson_plans (class_id, plan_date, subject, topic, description, homework, duration_minutes) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const tx = db.transaction(() => {
+    for (const row of rows) {
+      if (!row.plan_date || !row.subject) { skipped++; continue; }
+      // Resolve class by name or id
+      let class_id = row.class_id;
+      if (!class_id && row.class_name) {
+        const cls = db.prepare('SELECT id FROM classes WHERE name = ? AND active = 1').get(String(row.class_name).trim());
+        if (cls) class_id = cls.id;
+      }
+      if (!class_id) { skipped++; continue; }
+      insert.run(class_id, row.plan_date.trim(), row.subject.trim(), row.topic || '', row.description || '', row.homework || '', parseInt(row.duration_minutes) || 60);
+      imported++;
+    }
+  });
+  tx();
+  res.json({ imported, skipped });
+});
+
 // Create plan
 router.post('/', (req, res) => {
   const { class_id, plan_date, subject, topic, description, homework, duration_minutes } = req.body;

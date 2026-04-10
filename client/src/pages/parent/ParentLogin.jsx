@@ -71,14 +71,17 @@ export default function ParentLogin({ onLogin }) {
             {/* CAPTCHA */}
             {captcha && (
               <div>
-                <label className="label">Security Check — What is {captcha.question}?</label>
-                <div className="flex gap-2">
-                  <input className="input flex-1" type="number" value={answer}
-                    onChange={e => setAnswer(e.target.value)} placeholder="Answer" min="0" max="99" />
+                <label className="label">Security Check — Type the characters shown</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <img src={captcha.image_url} alt="CAPTCHA" style={{ height: 48, borderRadius: 8, border: '1px solid #e8e8ed', background: '#f0f0f0' }} />
                   <button type="button" onClick={refresh}
                     className="px-3 py-2 text-xs text-apple-blue border border-apple-gray-2 rounded-apple-sm hover:bg-apple-gray"
-                    title="New question">↺</button>
+                    title="Refresh CAPTCHA">↺</button>
                 </div>
+                <input className="input" type="text" value={answer}
+                  onChange={e => setAnswer(e.target.value)} placeholder="Enter characters above"
+                  maxLength={5} autoComplete="off" autoCorrect="off" spellCheck="false"
+                  style={{ textTransform: 'uppercase', letterSpacing: '0.15em' }} />
               </div>
             )}
 

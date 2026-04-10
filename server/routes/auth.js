@@ -27,18 +27,43 @@ setInterval(() => { const now = Date.now(); for (const [k, v] of loginAttempts) 
 const captchaStore = new Map();
 setInterval(() => { const now = Date.now(); for (const [k, v] of captchaStore) if (now > v.expires) captchaStore.delete(k); }, 60 * 1000);
 
-function generateCaptcha() {
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * 9) + 1;
+function generateImageCaptcha() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let text = '';
+  for (let i = 0; i < 5; i++) text += chars[Math.floor(Math.random() * chars.length)];
   const id = crypto.randomBytes(12).toString('hex');
-  captchaStore.set(id, { answer: String(a + b), expires: Date.now() + 10 * 60 * 1000 });
-  return { captcha_id: id, question: `${a} + ${b}` };
+  captchaStore.set(id, { answer: text, expires: Date.now() + 10 * 60 * 1000 });
+
+  const width = 180, height = 60;
+  const lines = [];
+  for (let i = 0; i < 7; i++) {
+    const x1 = Math.floor(Math.random() * width), y1 = Math.floor(Math.random() * height);
+    const x2 = Math.floor(Math.random() * width), y2 = Math.floor(Math.random() * height);
+    const r = Math.floor(Math.random() * 180), g = Math.floor(Math.random() * 180), b = Math.floor(Math.random() * 180);
+    lines.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgb(${r},${g},${b})" stroke-width="1.5" opacity="0.45"/>`);
+  }
+  const dots = [];
+  for (let i = 0; i < 40; i++) {
+    const cx = Math.floor(Math.random() * width), cy = Math.floor(Math.random() * height);
+    dots.push(`<circle cx="${cx}" cy="${cy}" r="1.2" fill="rgba(0,0,0,0.12)"/>`);
+  }
+  const palette = ['#1a237e','#4a148c','#b71c1c','#004d40','#e65100','#0d47a1','#1b5e20','#311b92'];
+  const letters = text.split('').map((c, i) => {
+    const x = 16 + i * 30;
+    const y = 38 + (Math.random() * 10 - 5);
+    const angle = Math.floor(Math.random() * 24 - 12);
+    const size = 24 + Math.floor(Math.random() * 8);
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    return `<text x="${x}" y="${y}" transform="rotate(${angle},${x},${y})" font-size="${size}" font-family="Arial,sans-serif" font-weight="bold" fill="${color}">${c}</text>`;
+  }).join('');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"><rect width="${width}" height="${height}" rx="8" fill="#f0f0f0"/>${lines.join('')}${dots.join('')}${letters}</svg>`;
+  return { captcha_id: id, image_url: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}` };
 }
 
 function verifyCaptcha(id, answer) {
   const rec = captchaStore.get(id);
   if (!rec || Date.now() > rec.expires) return false;
-  if (rec.answer !== String(answer).trim()) return false;
+  if (rec.answer.toUpperCase() !== String(answer).trim().toUpperCase()) return false;
   captchaStore.delete(id); // one-time use
   return true;
 }
@@ -73,9 +98,9 @@ function hashPin(pin) {
   return crypto.createHash('sha256').update(pin + SECRET).digest('hex');
 }
 
-// GET /api/auth/captcha — generate a math CAPTCHA
+// GET /api/auth/captcha — generate an image CAPTCHA
 router.get('/captcha', (req, res) => {
-  res.json(generateCaptcha());
+  res.json(generateImageCaptcha());
 });
 
 // Admin login

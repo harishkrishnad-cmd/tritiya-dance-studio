@@ -41,6 +41,7 @@ export const api = {
   addStudentToClass: (cid, sid) => request('POST', `/classes/${cid}/students`, { student_id: sid }),
   removeStudentFromClass: (cid, sid) => request('DELETE', `/classes/${cid}/students/${sid}`),
   getAvailableStudents: (cid) => request('GET', `/classes/${cid}/available-students`),
+  bulkImportClasses: (classes) => request('POST', '/classes/bulk-import', { classes }),
 
   // Attendance
   getSessions: (p = {}) => request('GET', '/attendance/sessions?' + new URLSearchParams(p)),
@@ -66,6 +67,7 @@ export const api = {
   deleteLessonPlan: (id) => request('DELETE', `/lesson-plans/${id}`),
   notifyLessonPlan: (id) => request('POST', `/lesson-plans/${id}/notify`),
   getStudentPlans: (sid) => request('GET', `/lesson-plans/student/${sid}`),
+  bulkImportLessonPlans: (plans) => request('POST', '/lesson-plans/bulk-import', { plans }),
 
   // Settings
   getSettings: () => request('GET', '/settings'),

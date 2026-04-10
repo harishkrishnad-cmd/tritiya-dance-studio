@@ -56,6 +56,28 @@ router.delete('/:id', (req, res) => {
   res.json({ success: true });
 });
 
+// Bulk import classes from Excel
+router.post('/bulk-import', (req, res) => {
+  const { classes: rows } = req.body;
+  if (!Array.isArray(rows)) return res.status(400).json({ error: 'classes must be an array' });
+  const VALID_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+  let imported = 0, skipped = 0;
+  const insert = db.prepare('INSERT INTO classes (name, day_of_week, start_time, end_time, level, description, max_students) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const tx = db.transaction(() => {
+    for (const row of rows) {
+      if (!row.name || !row.day_of_week || !row.start_time || !row.end_time) { skipped++; continue; }
+      const day = VALID_DAYS.find(d => d.toLowerCase() === String(row.day_of_week).trim().toLowerCase());
+      if (!day) { skipped++; continue; }
+      const existing = db.prepare('SELECT id FROM classes WHERE name = ? AND day_of_week = ? AND start_time = ? AND active = 1').get(row.name.trim(), day, row.start_time.trim());
+      if (existing) { skipped++; continue; }
+      insert.run(row.name.trim(), day, row.start_time.trim(), row.end_time.trim(), row.level || 'All', row.description || '', parseInt(row.max_students) || 20);
+      imported++;
+    }
+  });
+  tx();
+  res.json({ imported, skipped });
+});
+
 // Enroll student
 router.post('/:id/students', (req, res) => {
   const { student_id } = req.body;
