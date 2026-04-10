@@ -1,0 +1,40 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            cd /home/ubuntu/tritiya-dance-studio
+
+            echo "==> Pulling latest code..."
+            git pull origin main
+
+            echo "==> Installing server dependencies..."
+            npm install --production
+
+            echo "==> Building client..."
+            cd client
+            npm install --include=dev
+            npm run build
+            cd ..
+
+            echo "==> Ensuring data directory exists..."
+            mkdir -p /home/ubuntu/data
+
+            echo "==> Restarting app..."
+            pm2 restart tritiya --env production || pm2 start ecosystem.config.js --env production
+
+            echo "==> Deploy complete ✅"
+            pm2 status

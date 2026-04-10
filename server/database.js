@@ -1,9 +1,9 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-// On Render.com, use the persistent disk at /data to survive deploys
-// Locally, use the server directory
-const DB_PATH = process.env.RENDER ? '/data/school.db' : path.join(__dirname, 'school.db');
+// DB_PATH env var lets you point to any persistent location (e.g. /home/ubuntu/data/school.db on EC2)
+// Falls back to local server directory for development
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'school.db');
 const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
