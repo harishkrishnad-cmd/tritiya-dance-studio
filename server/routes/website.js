@@ -10,8 +10,10 @@ router.get('/public', (req, res) => {
     const settings = {};
     rows.forEach(r => { settings[r.key] = r.value; });
     const gallery = db.prepare('SELECT id, src, alt, sort_order FROM website_gallery ORDER BY sort_order ASC, id ASC').all();
-    // Include logo, theme, UPI QR from main settings table
-    const mainKeys = ['logo_image', 'site_theme', 'upi_qr_image', 'school_name'];
+    // Include logo, theme, UPI QR, and certificate settings from main settings table
+    const mainKeys = ['logo_image', 'site_theme', 'upi_qr_image', 'school_name',
+      'cert_title', 'cert_subtitle', 'cert_instructor_name', 'cert_instructor_title',
+      'cert_border_color', 'cert_accent_color', 'cert_bg_image', 'cert_footer_text'];
     const mainRows = db.prepare(`SELECT key, value FROM settings WHERE key IN (${mainKeys.map(()=>'?').join(',')})`).all(mainKeys);
     mainRows.forEach(r => { settings[r.key] = r.value; });
     res.json({ settings, gallery });

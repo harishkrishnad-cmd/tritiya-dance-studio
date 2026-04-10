@@ -143,7 +143,7 @@ hr{border:none;border-top:1px solid #e8e8ed;margin:20px 0}
 </div></body></html>`;
 }
 
-async function sendWelcomeEmail(student, plainPassword) {
+async function sendWelcomeEmail(student, plainPassword, studentPlainPassword) {
   const settings = getSettings();
   const s = settings.school_name || 'Tritiya Dance Studio';
   const appUrl = settings.app_url || '';
@@ -153,20 +153,56 @@ async function sendWelcomeEmail(student, plainPassword) {
     <p>Welcome to <strong>${s}</strong>! We're thrilled to have <strong>${student.name}</strong> join our Bharatanatyam family.</p>
     <div class="box"><div class="lbl">Student</div><div class="val">${student.name}</div></div>
     <div class="box"><div class="lbl">Level</div><div class="val">${student.level}</div></div>
-    <div class="box"><div class="lbl">Monthly Fee</div><div class="val blue">${settings.currency || '₹'}${student.monthly_fee}</div></div>
+    ${student.monthly_fee ? `<div class="box"><div class="lbl">Monthly Fee</div><div class="val blue">${settings.currency || '₹'}${student.monthly_fee}</div></div>` : ''}
     <hr>
-    <p><strong>Your Parent Portal Login</strong></p>
-    <p>Use these credentials to track attendance, fees and lesson plans:</p>
+    <p style="background:#fff8e1;border-left:4px solid #ff9500;padding:12px 16px;border-radius:6px;font-size:13px;color:#7a5a00;margin:16px 0">
+      ⚠️ <strong>Note:</strong> Your account will be activated once the teacher confirms your payment. You will be able to log in after activation.
+    </p>
+    <hr>
+    <p><strong>Parent Portal Login</strong></p>
+    <p style="font-size:13px;color:#6e6e73">Track attendance, fees and lesson plans at <strong>/parent</strong>${appUrl ? ` (${appUrl}/parent)` : ''}:</p>
     <div class="cred">
       <div class="cred-row"><span class="cred-lbl">Username</span><span class="cred-val">${student.parent_username}</span></div>
       <div class="cred-row"><span class="cred-lbl">Password</span><span class="cred-val">${plainPassword || student.parent_pin || '—'}</span></div>
-      ${appUrl ? `<div class="cred-row"><span class="cred-lbl">Portal URL</span><span class="cred-val">${appUrl}</span></div>` : ''}
     </div>
-    <p style="font-size:13px;color:#86868b">Please keep these credentials safe.</p>
+    ${(studentPlainPassword || student.student_username) ? `
+    <hr>
+    <p><strong>Student Learning Portal Login</strong></p>
+    <p style="font-size:13px;color:#6e6e73">Access courses, quizzes and certificates at <strong>/student</strong>${appUrl ? ` (${appUrl}/student)` : ''}:</p>
+    <div class="cred">
+      <div class="cred-row"><span class="cred-lbl">Username</span><span class="cred-val">${student.student_username || '—'}</span></div>
+      <div class="cred-row"><span class="cred-lbl">Password</span><span class="cred-val">${studentPlainPassword || student.student_pin || '—'}</span></div>
+    </div>` : ''}
+    <p style="font-size:13px;color:#86868b">Please keep these credentials safe. Do not share them with anyone.</p>
     ${settings.upi_qr_image ? `<hr><p style="font-size:14px;font-weight:600;color:#1d1d1f;margin-bottom:8px">💳 Fee Payment via UPI</p><p style="font-size:13px;color:#6e6e73;margin-bottom:12px">Scan the QR code below to pay monthly fees:</p><div style="text-align:center;margin:16px 0"><img src="${settings.upi_qr_image}" alt="UPI QR Code" style="max-width:220px;border-radius:12px;border:1px solid #e8e8ed;padding:12px;background:#fff" /></div>` : ''}
     <p>With warm regards,<br><strong>${s}</strong></p>
   `);
   return sendEmail(student.parent_email, subject, html, student.id, 'welcome');
+}
+
+async function sendActivationEmail(student) {
+  const settings = getSettings();
+  const s = settings.school_name || 'Tritiya Dance Studio';
+  const appUrl = settings.app_url || '';
+  const subject = `Account Activated – Welcome to ${s}!`;
+  const html = base(s, `
+    <p>Dear ${student.parent_name || 'Parent/Guardian'},</p>
+    <p>Great news! Your account for <strong>${student.name}</strong> has been <strong style="color:#34c759">activated</strong> by the teacher. You can now log in to the portals.</p>
+    <hr>
+    <p><strong>Parent Portal</strong>${appUrl ? ` — <a href="${appUrl}/parent" style="color:#0071e3">${appUrl}/parent</a>` : ' — /parent'}</p>
+    <div class="cred">
+      <div class="cred-row"><span class="cred-lbl">Username</span><span class="cred-val">${student.parent_username}</span></div>
+      <div class="cred-row"><span class="cred-lbl">Password</span><span class="cred-val">${student.parent_pin || '(as emailed earlier)'}</span></div>
+    </div>
+    ${student.student_username ? `
+    <p><strong>Student Portal</strong>${appUrl ? ` — <a href="${appUrl}/student" style="color:#0071e3">${appUrl}/student</a>` : ' — /student'}</p>
+    <div class="cred">
+      <div class="cred-row"><span class="cred-lbl">Username</span><span class="cred-val">${student.student_username}</span></div>
+      <div class="cred-row"><span class="cred-lbl">Password</span><span class="cred-val">${student.student_pin || '(as emailed earlier)'}</span></div>
+    </div>` : ''}
+    <p>With warm regards,<br><strong>${s}</strong></p>
+  `);
+  return sendEmail(student.parent_email, subject, html, student.id, 'activation');
 }
 
 async function sendPaymentReminder(payment, student) {
@@ -234,4 +270,4 @@ async function sendTestEmail(toEmail) {
   return sendEmail(toEmail, `Test Email – ${s}`, html, null, 'test');
 }
 
-module.exports = { sendEmail, sendWelcomeEmail, sendPaymentReminder, sendScheduleReminder, sendLessonPlanEmail, sendTestEmail };
+module.exports = { sendEmail, sendWelcomeEmail, sendActivationEmail, sendPaymentReminder, sendScheduleReminder, sendLessonPlanEmail, sendTestEmail };

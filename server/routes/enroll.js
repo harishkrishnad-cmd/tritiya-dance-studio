@@ -56,19 +56,32 @@ router.post('/submit/:token', async (req, res) => {
   const password = Math.random().toString(36).slice(-6).toUpperCase();
   const passwordHash = hashPin(password);
 
+  // Generate student credentials
+  const studentUsername = (student_name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '') + Math.floor(Math.random() * 900 + 100));
+  const studentPassword = Math.random().toString(36).slice(-6).toUpperCase();
+  const studentPasswordHash = hashPin(studentPassword);
+
   try {
     const result = db.prepare(`
-      INSERT INTO students (name, date_of_birth, level, parent_name, parent_email, parent_phone, address, notes, parent_username, parent_password_hash, parent_pin, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-    `).run(student_name.trim(), date_of_birth || null, level || 'Beginner', parent_name.trim(), parent_email.trim().toLowerCase(), parent_phone || null, address || null, notes || null, username, passwordHash, password);
+      INSERT INTO students (name, date_of_birth, level, parent_name, parent_email, parent_phone, address, notes,
+        parent_username, parent_password_hash, parent_pin,
+        student_username, student_password_hash, student_pin,
+        status, account_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 0)
+    `).run(
+      student_name.trim(), date_of_birth || null, level || 'Beginner',
+      parent_name.trim(), parent_email.trim().toLowerCase(), parent_phone || null, address || null, notes || null,
+      username, passwordHash, password,
+      studentUsername, studentPasswordHash, studentPassword
+    );
 
     const student = db.prepare('SELECT * FROM students WHERE id=?').get(result.lastInsertRowid);
 
     // Increment uses count
     db.prepare('UPDATE enrollment_links SET uses_count = uses_count + 1 WHERE id=?').run(link.id);
 
-    // Send welcome email
-    sendWelcomeEmail(student, password).catch(console.error);
+    // Send welcome email with both credentials (account inactive until teacher approves)
+    sendWelcomeEmail(student, password, studentPassword).catch(console.error);
 
     res.json({
       success: true,

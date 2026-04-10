@@ -3,30 +3,47 @@ import React, { useState, useEffect, useRef } from 'react';
 // ── TOKEN UTILS ───────────────────────────────────────────────
 function parseToken(t) { try { return JSON.parse(atob(t.split('.')[0])); } catch { return null; } }
 
-// ── LOGIN PAGE (username + password) ─────────────────────────
+// ── LOGIN PAGE (username + password + CAPTCHA) ────────────────
 function StudentLogin({ onLogin }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [captcha, setCaptcha] = useState(null);
+  const [captchaAnswer, setCaptchaAnswer] = useState('');
+
+  useEffect(() => { loadCaptcha(); }, []);
+
+  async function loadCaptcha() {
+    setCaptchaAnswer('');
+    try { const r = await fetch('/api/auth/captcha'); setCaptcha(await r.json()); } catch { setCaptcha(null); }
+  }
 
   async function login() {
-    if (!username.trim() || !password.trim()) return;
+    if (!username.trim() || !password.trim() || !captchaAnswer.trim()) return;
     setLoading(true); setError('');
     try {
       const res = await fetch('/api/auth/student-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim().toLowerCase(), password: password.trim() }),
+        body: JSON.stringify({ username: username.trim().toLowerCase(), password: password.trim(), captcha_id: captcha?.captcha_id, captcha_answer: captchaAnswer }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || 'Login failed'); setLoading(false); return; }
+      if (!res.ok) {
+        if (data.captcha_error) loadCaptcha();
+        setError(data.error || 'Login failed');
+        setLoading(false); return;
+      }
       localStorage.setItem('student_token', data.token);
       onLogin(data.token);
     } catch { setError('Network error. Please try again.'); }
     setLoading(false);
   }
+
+  const inp = { width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 15, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7' };
+  const lbl = { fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 6 };
+  const notActivated = error.includes('not yet activated');
 
   return (
     <div style={{ minHeight: '100svh', background: '#f5f5f7', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" }}>
@@ -38,38 +55,45 @@ function StudentLogin({ onLogin }) {
         </div>
 
         <div style={{ background: '#fff', borderRadius: 18, padding: 28, boxShadow: '0 2px 20px rgba(0,0,0,0.08)' }}>
-          <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 20, lineHeight: 1.6 }}>
-            Sign in with the credentials given to you by your teacher.
-          </p>
           {error && (
-            <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 14 }}>{error}</div>
+            <div style={{ background: notActivated ? '#fff8e1' : '#fff2f0', color: notActivated ? '#7a5a00' : '#ff3b30', fontSize: 13, padding: '12px 14px', borderRadius: 8, marginBottom: 16, border: notActivated ? '1px solid #ffe082' : 'none', lineHeight: 1.5 }}>
+              {notActivated ? <><strong>Account Pending Activation</strong><br/>{error}</> : error}
+            </div>
           )}
-          <label style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Username</label>
-          <input
-            value={username}
-            onChange={e => { setUsername(e.target.value); setError(''); }}
-            placeholder="e.g. priya.s123"
-            onKeyDown={e => e.key === 'Enter' && login()}
-            style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 15, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7', marginBottom: 14, marginTop: 6 }}
-            autoCapitalize="none" autoCorrect="off" spellCheck="false"
-          />
-          <label style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Password</label>
-          <div style={{ position: 'relative', marginTop: 6, marginBottom: 20 }}>
-            <input
-              value={password}
-              onChange={e => { setPassword(e.target.value); setError(''); }}
-              type={showPass ? 'text' : 'password'}
-              placeholder="Enter your password"
-              onKeyDown={e => e.key === 'Enter' && login()}
-              style={{ width: '100%', padding: '11px 44px 11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 15, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7' }}
-            />
-            <button onClick={() => setShowPass(v => !v)}
-              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#86868b', fontSize: 13 }}>
-              {showPass ? 'Hide' : 'Show'}
-            </button>
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Username</label>
+            <input value={username} onChange={e => { setUsername(e.target.value); setError(''); }} placeholder="e.g. priya.s123"
+              onKeyDown={e => e.key === 'Enter' && login()} style={inp} autoCapitalize="none" autoCorrect="off" spellCheck="false" />
           </div>
-          <button onClick={login} disabled={loading || !username.trim() || !password.trim()}
-            style={{ width: '100%', padding: '13px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: loading || !username.trim() || !password.trim() ? 0.6 : 1 }}>
+          <div style={{ marginBottom: 14 }}>
+            <label style={lbl}>Password</label>
+            <div style={{ position: 'relative' }}>
+              <input value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
+                type={showPass ? 'text' : 'password'} placeholder="Enter your password"
+                onKeyDown={e => e.key === 'Enter' && login()}
+                style={{ ...inp, paddingRight: 44 }} />
+              <button onClick={() => setShowPass(v => !v)}
+                style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#86868b', fontSize: 13 }}>
+                {showPass ? 'Hide' : 'Show'}
+              </button>
+            </div>
+          </div>
+          {captcha && (
+            <div style={{ marginBottom: 20 }}>
+              <label style={lbl}>Security Check — What is {captcha.question}?</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={captchaAnswer} onChange={e => setCaptchaAnswer(e.target.value)}
+                  type="number" placeholder="Answer" min="0" max="99"
+                  onKeyDown={e => e.key === 'Enter' && login()}
+                  style={{ ...inp, flex: 1 }} />
+                <button onClick={loadCaptcha}
+                  style={{ padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', background: '#f5f5f7', cursor: 'pointer', fontSize: 14, color: '#0071e3' }}
+                  title="Get new question">↺</button>
+              </div>
+            </div>
+          )}
+          <button onClick={login} disabled={loading || !username.trim() || !password.trim() || !captchaAnswer.trim()}
+            style={{ width: '100%', padding: '13px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', opacity: (loading || !username.trim() || !password.trim() || !captchaAnswer.trim()) ? 0.6 : 1 }}>
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </div>
@@ -83,30 +107,48 @@ function StudentLogin({ onLogin }) {
 
 // ── CERTIFICATE PAGE ──────────────────────────────────────────
 function Certificate({ attempt, courseName, studentName, onBack }) {
+  const [certSettings, setCertSettings] = useState({});
   const date = new Date(attempt.attempted_at || Date.now()).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  useEffect(() => {
+    fetch('/api/website/public').then(r => r.json()).then(d => {
+      if (d.settings) setCertSettings(d.settings);
+    }).catch(() => {});
+  }, []);
+
+  const borderColor = certSettings.cert_border_color || '#1c1c1e';
+  const accentColor = certSettings.cert_accent_color || '#d4af37';
+  const certTitle = certSettings.cert_title || 'Certificate of Completion';
+  const certSubtitle = certSettings.cert_subtitle || 'Classical Bharatanatyam Dance Studio';
+  const instructorName = certSettings.cert_instructor_name || 'Revathi Krishna';
+  const instructorTitle = certSettings.cert_instructor_title || 'Principal Instructor';
+  const footerText = certSettings.cert_footer_text || 'Tritiya Dance Studio';
+  const schoolName = certSettings.school_name || 'Tritiya Dance Studio';
+
   return (
     <div style={{ minHeight: '100svh', background: '#f5f5f7', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "-apple-system, BlinkMacSystemFont, Georgia, serif" }}>
       <button onClick={onBack} style={{ background: 'none', border: 'none', color: '#0071e3', fontSize: 14, cursor: 'pointer', marginBottom: 24, alignSelf: 'flex-start' }}>← Back</button>
-      <div id="cert" style={{ background: '#fff', maxWidth: 680, width: '100%', borderRadius: 4, padding: '60px 64px', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,0.12)', border: '8px solid #1c1c1e', position: 'relative' }}>
-        <div style={{ position: 'absolute', inset: 12, border: '2px solid #d4af37', borderRadius: 2, pointerEvents: 'none' }} />
+      <div id="cert" style={{ background: '#fff', maxWidth: 680, width: '100%', borderRadius: 4, padding: '60px 64px', textAlign: 'center', boxShadow: '0 8px 40px rgba(0,0,0,0.12)', border: `8px solid ${borderColor}`, position: 'relative' }}>
+        <div style={{ position: 'absolute', inset: 12, border: `2px solid ${accentColor}`, borderRadius: 2, pointerEvents: 'none' }} />
         <div style={{ fontSize: 40, marginBottom: 8 }}>🪷</div>
-        <p style={{ fontSize: 12, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#86868b', marginBottom: 4 }}>Tritiya Dance Studio</p>
-        <h1 style={{ fontSize: 36, fontWeight: 300, color: '#1d1d1f', letterSpacing: '-0.01em', margin: '20px 0 8px', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>Certificate of Completion</h1>
+        <p style={{ fontSize: 12, letterSpacing: '0.3em', textTransform: 'uppercase', color: '#86868b', marginBottom: 4 }}>{schoolName}</p>
+        <p style={{ fontSize: 11, color: '#aaaaaa', marginBottom: 2 }}>{certSubtitle}</p>
+        <h1 style={{ fontSize: 36, fontWeight: 300, color: '#1d1d1f', letterSpacing: '-0.01em', margin: '20px 0 8px', fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>{certTitle}</h1>
         <p style={{ fontSize: 14, color: '#86868b', marginBottom: 28 }}>This is to certify that</p>
         <p style={{ fontSize: 32, fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: 12 }}>{studentName}</p>
         <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 8 }}>has successfully completed the course</p>
         <p style={{ fontSize: 22, fontWeight: 600, color: '#1d1d1f', marginBottom: 8 }}>{courseName}</p>
         <p style={{ fontSize: 14, color: '#6e6e73', marginBottom: 28 }}>with a score of <strong style={{ color: '#34c759' }}>{attempt.score}%</strong></p>
-        <div style={{ width: 80, height: 2, background: '#d4af37', margin: '0 auto 20px' }} />
+        <div style={{ width: 80, height: 2, background: accentColor, margin: '0 auto 20px' }} />
         <p style={{ fontSize: 13, color: '#86868b' }}>Awarded on {date}</p>
-        <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', marginTop: 32 }}>Revathi Krishna</p>
-        <p style={{ fontSize: 12, color: '#86868b' }}>Principal Instructor · Tritiya Dance Studio</p>
+        <p style={{ fontSize: 15, fontWeight: 600, color: '#1d1d1f', marginTop: 32 }}>{instructorName}</p>
+        <p style={{ fontSize: 12, color: '#86868b' }}>{instructorTitle} · {footerText}</p>
       </div>
       <button onClick={() => window.print()}
         style={{ marginTop: 24, padding: '12px 28px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
         🖨️ Print / Save as PDF
       </button>
-      <style>{`@media print { button { display: none !important; } body { background: white; } #cert { box-shadow: none; border: 8px solid #1c1c1e !important; } }`}</style>
+      <style>{`@media print { button { display: none !important; } body { background: white; } #cert { box-shadow: none !important; } }`}</style>
     </div>
   );
 }

@@ -4,6 +4,28 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+
+// ── Security headers ──────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+// ── Global API rate limit (100 req / min per IP) ──────────────
+const apiReqCounts = new Map();
+setInterval(() => apiReqCounts.clear(), 60 * 1000);
+app.use('/api', (req, res, next) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  const count = (apiReqCounts.get(ip) || 0) + 1;
+  apiReqCounts.set(ip, count);
+  if (count > 200) return res.status(429).json({ error: 'Too many requests. Please slow down.' });
+  next();
+});
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 

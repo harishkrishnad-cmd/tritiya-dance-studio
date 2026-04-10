@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const { sendWelcomeEmail } = require('../services/emailService');
+const { sendWelcomeEmail, sendActivationEmail } = require('../services/emailService');
 const { hashPin } = require('./auth');
 
 // List all students
@@ -197,6 +197,28 @@ router.post('/:id/student-credentials', (req, res) => {
     .run(username, hash, password, req.params.id);
 
   res.json({ username, password, student_name: student.name });
+});
+
+// ── Activate account (teacher confirms payment) ───────────────
+router.post('/:id/activate', async (req, res) => {
+  const student = db.prepare('SELECT * FROM students WHERE id=?').get(req.params.id);
+  if (!student) return res.status(404).json({ error: 'Student not found' });
+  db.prepare('UPDATE students SET account_active=1 WHERE id=?').run(req.params.id);
+  const updated = db.prepare('SELECT * FROM students WHERE id=?').get(req.params.id);
+  // Send activation notification email
+  sendActivationEmail(updated).catch(console.error);
+  res.json({ success: true, student: updated });
+});
+
+// ── Deactivate account ────────────────────────────────────────
+router.post('/:id/deactivate', (req, res) => {
+  db.prepare('UPDATE students SET account_active=0 WHERE id=?').run(req.params.id);
+  res.json({ success: true });
+});
+
+// ── Get pending activations ───────────────────────────────────
+router.get('/pending/activations', (req, res) => {
+  res.json(db.prepare("SELECT * FROM students WHERE account_active=0 ORDER BY created_at DESC").all());
 });
 
 // Reset parent password

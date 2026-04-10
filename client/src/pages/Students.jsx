@@ -220,9 +220,31 @@ export default function Students() {
   const [enrollLinks, setEnrollLinks] = useState([]);
   const [enrollLoading, setEnrollLoading] = useState(false);
   const [newLinkLabel, setNewLinkLabel] = useState('');
+  const [pending, setPending] = useState([]);
+  const [activating, setActivating] = useState(null);
 
   const load = useCallback(async () => { setLoading(true); setStudents(await api.getStudents({status:statusFilter})); setLoading(false); }, [statusFilter]);
   useEffect(() => { load(); }, [load]);
+
+  async function loadPending() {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/students/pending/activations', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setPending(await res.json());
+    } catch {}
+  }
+  useEffect(() => { loadPending(); }, []);
+
+  async function activateStudent(id) {
+    setActivating(id);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch(`/api/students/${id}/activate`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { loadPending(); load(); }
+      else alert('Activation failed');
+    } catch { alert('Activation failed'); }
+    setActivating(null);
+  }
 
   async function loadEnrollLinks() {
     setEnrollLoading(true);
@@ -274,6 +296,34 @@ export default function Students() {
           <button onClick={openAdd} className="btn-primary flex items-center gap-1.5"><UserPlus size={14}/> Add Student</button>
         </div>
       </div>
+
+      {/* ── Pending Activations Banner ── */}
+      {pending.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-apple p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg">⏳</span>
+            <div>
+              <p className="text-sm font-semibold text-amber-900">Pending Activations ({pending.length})</p>
+              <p className="text-xs text-amber-700">These students enrolled via the website and are waiting for your confirmation. Click <strong>Yes, Paid</strong> to activate their account and send them a login email.</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            {pending.map(s => (
+              <div key={s.id} className="flex items-center justify-between gap-3 bg-white rounded-apple-sm border border-amber-100 px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-medium text-apple-text">{s.name}</p>
+                  <p className="text-xs text-apple-gray-4">{s.level} · {s.parent_name} · {s.parent_email}</p>
+                  <p className="text-xs text-apple-gray-4">{s.created_at ? new Date(s.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
+                </div>
+                <button onClick={() => activateStudent(s.id)} disabled={activating === s.id}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-apple-sm hover:bg-green-700 disabled:opacity-60">
+                  {activating === s.id ? '…' : '✓ Yes, Paid — Activate'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-1.5 flex-wrap">
         {[['active','Active'],['inactive','Inactive'],['left','Left'],['all','All']].map(([v,l])=>(

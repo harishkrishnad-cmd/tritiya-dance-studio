@@ -473,6 +473,48 @@ export default function Settings({ onNameChange }) {
         )}
       </Section>
 
+      <Section title="Certificate Template" icon={Save}>
+        <p className="text-xs text-apple-gray-4">Customise the certificate shown to students when they pass a course quiz. Changes are saved with the main Save button.</p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label className="label">Certificate Title</label><input className="input" value={s.cert_title||'Certificate of Completion'} onChange={e=>set('cert_title',e.target.value)} placeholder="Certificate of Completion"/></div>
+            <div><label className="label">Studio Subtitle</label><input className="input" value={s.cert_subtitle||''} onChange={e=>set('cert_subtitle',e.target.value)} placeholder="Classical Bharatanatyam Dance Studio"/></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label className="label">Instructor Name</label><input className="input" value={s.cert_instructor_name||''} onChange={e=>set('cert_instructor_name',e.target.value)} placeholder="Revathi Krishna"/></div>
+            <div><label className="label">Instructor Title</label><input className="input" value={s.cert_instructor_title||''} onChange={e=>set('cert_instructor_title',e.target.value)} placeholder="Founder & Principal Instructor"/></div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label className="label">Border Color</label>
+              <div className="flex gap-2 items-center">
+                <input type="color" value={s.cert_border_color||'#1c1c1e'} onChange={e=>set('cert_border_color',e.target.value)} className="w-10 h-9 p-1 rounded border border-apple-gray-2 cursor-pointer"/>
+                <input className="input flex-1" value={s.cert_border_color||'#1c1c1e'} onChange={e=>set('cert_border_color',e.target.value)} placeholder="#1c1c1e"/>
+              </div>
+            </div>
+            <div><label className="label">Accent / Gold Color</label>
+              <div className="flex gap-2 items-center">
+                <input type="color" value={s.cert_accent_color||'#d4af37'} onChange={e=>set('cert_accent_color',e.target.value)} className="w-10 h-9 p-1 rounded border border-apple-gray-2 cursor-pointer"/>
+                <input className="input flex-1" value={s.cert_accent_color||'#d4af37'} onChange={e=>set('cert_accent_color',e.target.value)} placeholder="#d4af37"/>
+              </div>
+            </div>
+          </div>
+          <div><label className="label">Footer Text</label><input className="input" value={s.cert_footer_text||''} onChange={e=>set('cert_footer_text',e.target.value)} placeholder="Tritiya Dance Studio · Nagaram, Hyderabad"/></div>
+          <div className="p-3 bg-apple-gray rounded-apple-sm">
+            <p className="text-xs font-medium text-apple-gray-5 mb-2">Preview (approximate)</p>
+            <div style={{background:'#fff',border:`4px solid ${s.cert_border_color||'#1c1c1e'}`,borderRadius:4,padding:'20px 24px',textAlign:'center',position:'relative',maxWidth:360,margin:'0 auto'}}>
+              <div style={{position:'absolute',inset:6,border:`1.5px solid ${s.cert_accent_color||'#d4af37'}`,borderRadius:2,pointerEvents:'none'}}/>
+              <div style={{fontSize:22,marginBottom:4}}>🪷</div>
+              <p style={{fontSize:8,letterSpacing:'0.2em',textTransform:'uppercase',color:'#86868b',marginBottom:2}}>{s.cert_subtitle||'Classical Bharatanatyam Dance Studio'}</p>
+              <p style={{fontSize:13,fontStyle:'italic',fontFamily:'Georgia,serif',color:'#1d1d1f',margin:'8px 0 4px'}}>{s.cert_title||'Certificate of Completion'}</p>
+              <p style={{fontSize:11,color:'#1d1d1f',fontWeight:700,margin:'4px 0'}}>Student Name</p>
+              <div style={{width:40,height:1,background:s.cert_accent_color||'#d4af37',margin:'6px auto'}}/>
+              <p style={{fontSize:8,color:'#86868b'}}>{s.cert_instructor_name||'Revathi Krishna'} · {s.cert_instructor_title||'Founder & Principal Instructor'}</p>
+              <p style={{fontSize:7,color:'#86868b',marginTop:4}}>{s.cert_footer_text||'Tritiya Dance Studio'}</p>
+            </div>
+          </div>
+        </div>
+      </Section>
+
       <Section title="Admin Password" icon={Lock}>
         <p className="text-xs text-apple-gray-4">Change the admin login password. You'll need to enter the current password to confirm.</p>
         <div className="space-y-3">

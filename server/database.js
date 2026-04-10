@@ -274,6 +274,9 @@ if (!cols.includes('status')) db.exec("ALTER TABLE students ADD COLUMN status TE
 // Sync existing active flag to new status column
 db.exec("UPDATE students SET status='active' WHERE active=1 AND (status IS NULL OR status='')");
 db.exec("UPDATE students SET status='inactive' WHERE active=0 AND (status IS NULL OR status='')");
+// account_active: 1 = teacher confirmed payment, 0 = awaiting confirmation
+if (!cols.includes('account_active')) db.exec("ALTER TABLE students ADD COLUMN account_active INTEGER DEFAULT 1");
+// Existing manually-added students are already activated; enrollment form submissions set this to 0
 
 const upsert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
 const defaults = [
@@ -304,6 +307,14 @@ const defaults = [
   ['email_from_address', ''],
   ['logo_image', ''],           // base64 or URL
   ['site_theme', 'dark'],       // 'dark' | 'light'
+  ['cert_title', 'Certificate of Completion'],
+  ['cert_subtitle', 'Classical Bharatanatyam Dance Studio'],
+  ['cert_instructor_name', 'Revathi Krishna'],
+  ['cert_instructor_title', 'Founder & Principal Instructor'],
+  ['cert_border_color', '#1c1c1e'],
+  ['cert_accent_color', '#d4af37'],
+  ['cert_bg_image', ''],        // optional background watermark image
+  ['cert_footer_text', 'Tritiya Dance Studio · Nagaram, Hyderabad'],
 ];
 defaults.forEach(([k, v]) => upsert.run(k, v));
 
