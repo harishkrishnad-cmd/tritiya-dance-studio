@@ -181,31 +181,30 @@ export default function SignupPage() {
               <div style={{ background: '#f0f7ff', border: '1px solid #d0e8ff', borderRadius: 12, padding: 16, marginBottom: 20 }}>
                 <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', marginBottom: 2 }}>🔄 Set Up Monthly Auto-Payment</p>
                 <p style={{ fontSize: 12, color: '#555', marginBottom: 14, lineHeight: 1.6 }}>
-                  Like Netflix — tap your UPI app below to set up ₹1,000/month auto-debit. Never miss a payment again!
+                  Tap your UPI app — it opens with ₹1,000 pre-filled. Set up monthly auto-debit from within the app.
                 </p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
-                  <a href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
+                  <a href="tez://upi/pay?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&tn=Monthly+Dance+Fee"
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#4285F4,#34A853)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>G</div>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#4285F4,#34A853)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>G</div>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>Google Pay</span>
-                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000/mo</span>
+                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
                   </a>
-                  <a href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
+                  <a href="phonepe://pay?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&tn=Monthly+Dance+Fee"
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#5f259f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>P</div>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#5f259f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>P</div>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>PhonePe</span>
-                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000/mo</span>
+                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
                   </a>
-                  <a href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
+                  <a href="paytmmp://pay?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&tn=Monthly+Dance+Fee"
                     style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#00B9F1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>T</div>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#00BAF2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>T</div>
                     <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>Paytm</span>
-                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000/mo</span>
+                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
                   </a>
                 </div>
                 <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', lineHeight: 1.5 }}>
-                  Tap your app — it opens with ₹1,000/month auto-debit pre-filled<br/>
-                  UPI ID: <strong style={{ color: '#333' }}>9398350275@upi</strong>
+                  Opens the app directly with ₹1,000 pre-filled · UPI: <strong style={{ color: '#333' }}>9398350275@upi</strong>
                 </p>
               </div>
               {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
