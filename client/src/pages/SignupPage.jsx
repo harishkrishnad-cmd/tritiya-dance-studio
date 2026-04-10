@@ -178,35 +178,37 @@ export default function SignupPage() {
                 </div>
               )}
               {/* UPI AutoPay */}
-              <div style={{ background: '#f0f7ff', border: '1px solid #d0e8ff', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', marginBottom: 2 }}>🔄 Set Up Monthly Auto-Payment</p>
-                <p style={{ fontSize: 12, color: '#555', marginBottom: 14, lineHeight: 1.6 }}>
-                  Tap your UPI app — it opens with ₹1,000 pre-filled. Set up monthly auto-debit from within the app.
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
-                  <a href="tez://upi/pay?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&tn=Monthly+Dance+Fee"
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#4285F4,#34A853)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>G</div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>Google Pay</span>
-                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
-                  </a>
-                  <a href="phonepe://pay?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&tn=Monthly+Dance+Fee"
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#5f259f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>P</div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>PhonePe</span>
-                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
-                  </a>
-                  <a href="paytmmp://pay?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&tn=Monthly+Dance+Fee"
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#00BAF2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>T</div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>Paytm</span>
-                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
-                  </a>
+              {info.upi_vpa && (
+                <div style={{ background: '#f0f7ff', border: '1px solid #d0e8ff', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', marginBottom: 2 }}>🔄 Pay via UPI App</p>
+                  <p style={{ fontSize: 12, color: '#555', marginBottom: 14, lineHeight: 1.6 }}>
+                    Tap your app — opens with ₹1,000 and payment details pre-filled.
+                  </p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                    <a href={`tez://upi/pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee`}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#4285F4,#34A853)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>G</div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f' }}>Google Pay</span>
+                      <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
+                    </a>
+                    <a href={`phonepe://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee`}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: '#5f259f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>P</div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f' }}>PhonePe</span>
+                      <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
+                    </a>
+                    <a href={`paytmmp://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee`}
+                      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 10, background: '#00BAF2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18 }}>T</div>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f' }}>Paytm</span>
+                      <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000</span>
+                    </a>
+                  </div>
+                  <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', lineHeight: 1.5 }}>
+                    UPI ID: <strong style={{ color: '#333' }}>{info.upi_vpa}</strong>
+                  </p>
                 </div>
-                <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', lineHeight: 1.5 }}>
-                  Opens the app directly with ₹1,000 pre-filled · UPI: <strong style={{ color: '#333' }}>9398350275@upi</strong>
-                </p>
-              </div>
+              )}
               {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: paid ? '#f0fff4' : '#f5f5f7', border: `1px solid ${paid ? '#34c759' : '#e8e8ed'}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, cursor: 'pointer', transition: 'all 0.2s' }}>
                 <input type="checkbox" checked={paid} onChange={e => setPaid(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#34c759', cursor: 'pointer' }} />

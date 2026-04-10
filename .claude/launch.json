@@ -1,12 +1,1 @@
-{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "tritiya-client",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 5173,
-      "cwd": "client"
-    }
-  ]
-}
+{"version":"0.0.1","configurations":[{"name":"tritiya-client","runtimeExecutable":"npm","runtimeArgs":["run","dev"],"port":5173}]}

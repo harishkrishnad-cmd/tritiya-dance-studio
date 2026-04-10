@@ -370,6 +370,12 @@ export default function Settings({ onNameChange }) {
 
       <Section title="Payment UPI QR Code" icon={CreditCard}>
         <p className="text-xs text-apple-gray-4">Upload your UPI QR code — it will appear in welcome emails and payment reminders.</p>
+        <div>
+          <label className="label">UPI VPA / Payment Address</label>
+          <input className="input" value={s.upi_vpa||''} onChange={e=>set('upi_vpa',e.target.value)}
+            placeholder="e.g. 9398350275@ybl or name@okaxis" />
+          <p className="text-xs text-apple-gray-4 mt-1">Open any UPI app → Profile → copy your UPI ID (e.g. 9398350275@ybl). Used for the GPay/PhonePe/Paytm buttons on the enrollment form.</p>
+        </div>
         {s.upi_qr_image && (
           <div className="flex items-start gap-3">
             <img src={s.upi_qr_image} alt="UPI QR" className="w-32 h-32 object-contain border border-apple-gray-2 rounded-apple-sm bg-white p-2" />

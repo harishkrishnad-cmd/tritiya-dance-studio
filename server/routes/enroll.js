@@ -37,6 +37,7 @@ router.get('/info/:token', (req, res) => {
     label: link.label,
     school_name: settings.school_name || 'Tritiya Dance Studio',
     upi_qr_image: settings.upi_qr_image || '',
+    upi_vpa: settings.upi_vpa || '',
     currency: settings.currency || '₹',
   });
 });
