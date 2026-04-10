@@ -17,6 +17,7 @@ import StudentPortal from './pages/student/StudentPortal';
 import ParentLogin from './pages/parent/ParentLogin';
 import ParentDashboard from './pages/parent/ParentDashboard';
 import EnrollPage from './pages/EnrollPage';
+import SignupPage from './pages/SignupPage';
 import InstallPrompt from './components/InstallPrompt';
 import { api } from './api';
 
@@ -77,6 +78,11 @@ export default function App() {
   // Enrollment form (public)
   if (location.pathname.startsWith('/enroll/')) {
     return <Routes><Route path="/enroll/:token" element={<EnrollPage />} /></Routes>;
+  }
+
+  // Parent signup form (public) — teacher sends /signup/:token
+  if (location.pathname.startsWith('/signup/')) {
+    return <Routes><Route path="/signup/:token" element={<SignupPage />} /></Routes>;
   }
 
   // Admin login at /login

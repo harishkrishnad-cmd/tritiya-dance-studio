@@ -174,6 +174,19 @@ function AboutEditor({ s, set }) {
       <Field label="About Section Photo" hint="The portrait photo shown next to the about text">
         <ImagePicker value={s.about_photo} onChange={v => set('about_photo', v)} label="About Photo" />
       </Field>
+      <div style={{ borderTop: '1px solid #e8e8ed', paddingTop: 20, marginTop: 8 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f', marginBottom: 12 }}>Key Stats (shown below the about text)</p>
+        {[1,2,3].map(n => (
+          <div key={n} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <Field label={`Stat ${n} — Title`}>
+              <Input value={s[`stat${n}_title`]} onChange={v => set(`stat${n}_title`, v)} placeholder={n===1?'Bharatanatyam':n===2?'Kuchipudi':'All ages'} />
+            </Field>
+            <Field label={`Stat ${n} — Subtitle`}>
+              <Input value={s[`stat${n}_sub`]} onChange={v => set(`stat${n}_sub`, v)} placeholder={n===1?'Primary discipline':n===2?'Secondary discipline':'Beginners welcome'} />
+            </Field>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

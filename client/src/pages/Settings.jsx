@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Mail, Send, School, Bell, CheckCircle, XCircle, MessageSquare, CreditCard, Image, Download, Upload, Sun, Moon } from 'lucide-react';
+import { Save, Mail, Send, School, Bell, CheckCircle, XCircle, MessageSquare, CreditCard, Image, Download, Upload, Sun, Moon, Lock } from 'lucide-react';
 import { api } from '../api';
 
 function Section({ title, icon: Icon, children }) {
@@ -32,6 +32,9 @@ export default function Settings({ onNameChange }) {
   const logoFileRef = useRef();
   const [backupLoading, setBackupLoading] = useState(false);
   const [restoreLoading, setRestoreLoading] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwResult, setPwResult] = useState(null);
   const [restoreResult, setRestoreResult] = useState(null);
   const restoreFileRef = useRef();
   const [smtpProvider, setSmtpProvider] = useState('');
@@ -110,6 +113,26 @@ export default function Settings({ onNameChange }) {
   async function handleWaTest() {
     if(!testPhone) return alert('Enter a phone number'); setWaLoading(true); setWaResult(null);
     const r=await api.testWhatsApp(testPhone); setWaResult(r); setWaLoading(false);
+  }
+
+  async function handleChangePassword() {
+    setPwResult(null);
+    if (!pwForm.current || !pwForm.newPw) { setPwResult({ ok: false, msg: 'All fields are required' }); return; }
+    if (pwForm.newPw !== pwForm.confirm) { setPwResult({ ok: false, msg: 'New passwords do not match' }); return; }
+    if (pwForm.newPw.length < 6) { setPwResult({ ok: false, msg: 'New password must be at least 6 characters' }); return; }
+    setPwSaving(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const res = await fetch('/api/settings/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ current_password: pwForm.current, new_password: pwForm.newPw }),
+      });
+      const data = await res.json();
+      if (res.ok) { setPwResult({ ok: true, msg: 'Password changed successfully' }); setPwForm({ current: '', newPw: '', confirm: '' }); }
+      else setPwResult({ ok: false, msg: data.error });
+    } catch (e) { setPwResult({ ok: false, msg: e.message }); }
+    setPwSaving(false);
   }
 
   return (
@@ -448,6 +471,26 @@ export default function Settings({ onNameChange }) {
             </table>
           </div>
         )}
+      </Section>
+
+      <Section title="Admin Password" icon={Lock}>
+        <p className="text-xs text-apple-gray-4">Change the admin login password. You'll need to enter the current password to confirm.</p>
+        <div className="space-y-3">
+          <div><label className="label">Current Password</label><input type="password" className="input" value={pwForm.current} onChange={e=>setPwForm(v=>({...v,current:e.target.value}))} placeholder="Enter current password" autoComplete="current-password"/></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label className="label">New Password</label><input type="password" className="input" value={pwForm.newPw} onChange={e=>setPwForm(v=>({...v,newPw:e.target.value}))} placeholder="Min 6 characters" autoComplete="new-password"/></div>
+            <div><label className="label">Confirm New Password</label><input type="password" className="input" value={pwForm.confirm} onChange={e=>setPwForm(v=>({...v,confirm:e.target.value}))} placeholder="Repeat new password" autoComplete="new-password"/></div>
+          </div>
+          <button onClick={handleChangePassword} disabled={pwSaving} className="btn-primary flex items-center gap-1.5">
+            <Lock size={13}/>{pwSaving ? 'Saving…' : 'Change Password'}
+          </button>
+          {pwResult && (
+            <div className={`flex items-center gap-2 text-sm ${pwResult.ok ? 'text-apple-green' : 'text-apple-red'}`}>
+              {pwResult.ok ? <CheckCircle size={14}/> : <XCircle size={14}/>}
+              {pwResult.msg}
+            </div>
+          )}
+        </div>
       </Section>
 
       <Section title="Backup & Restore" icon={Download}>

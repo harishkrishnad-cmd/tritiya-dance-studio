@@ -4,8 +4,15 @@ const crypto = require('crypto');
 const db = require('../database');
 
 const ADMIN_USER = 'admin';
-const ADMIN_PASS = 'rishujanu';
+const ADMIN_PASS_DEFAULT = 'rishujanu';
 const SECRET = process.env.JWT_SECRET || 'tritiya-dance-studio-secret-2024';
+
+function getAdminPasswordHash() {
+  try {
+    const row = db.prepare("SELECT value FROM settings WHERE key='admin_password_hash'").get();
+    return row ? row.value : null;
+  } catch { return null; }
+}
 
 function makeToken(payload) {
   const encoded = Buffer.from(JSON.stringify({ ...payload, ts: Date.now() })).toString('base64');
@@ -29,10 +36,15 @@ function hashPin(pin) {
 // Admin login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === ADMIN_USER && password === ADMIN_PASS) {
-    return res.json({ token: makeToken({ username, role: 'admin' }), username, role: 'admin' });
-  }
-  res.status(401).json({ error: 'Invalid user ID or password' });
+  if (username !== ADMIN_USER) return res.status(401).json({ error: 'Invalid user ID or password' });
+
+  const storedHash = getAdminPasswordHash();
+  const valid = storedHash
+    ? hashPin(password) === storedHash
+    : password === ADMIN_PASS_DEFAULT;
+
+  if (!valid) return res.status(401).json({ error: 'Invalid user ID or password' });
+  res.json({ token: makeToken({ username, role: 'admin' }), username, role: 'admin' });
 });
 
 // Parent login

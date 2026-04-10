@@ -4,6 +4,7 @@ const nodemailer = require('nodemailer');
 const db = require('../database');
 const { sendTestEmail } = require('../services/emailService');
 const { sendWhatsApp } = require('../services/whatsappService');
+const { hashPin } = require('./auth');
 
 router.get('/', (req, res) => {
   const rows = db.prepare('SELECT key, value FROM settings').all();
@@ -93,6 +94,25 @@ router.get('/email-logs', (req, res) => {
 
 router.get('/whatsapp-logs', (req, res) => {
   res.json(db.prepare(`SELECT wl.*, s.name as student_name FROM whatsapp_logs wl LEFT JOIN students s ON s.id=wl.student_id ORDER BY wl.sent_at DESC LIMIT 100`).all());
+});
+
+// POST /api/settings/change-password
+router.post('/change-password', (req, res) => {
+  const { current_password, new_password } = req.body;
+  if (!current_password || !new_password) return res.status(400).json({ error: 'Both current and new password are required' });
+  if (new_password.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+
+  const ADMIN_PASS_DEFAULT = 'rishujanu';
+  const storedRow = db.prepare("SELECT value FROM settings WHERE key='admin_password_hash'").get();
+  const currentValid = storedRow
+    ? hashPin(current_password) === storedRow.value
+    : current_password === ADMIN_PASS_DEFAULT;
+
+  if (!currentValid) return res.status(401).json({ error: 'Current password is incorrect' });
+
+  const newHash = hashPin(new_password);
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('admin_password_hash', ?)").run(newHash);
+  res.json({ success: true });
 });
 
 module.exports = router;

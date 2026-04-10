@@ -24,6 +24,9 @@ const DEFAULTS = {
   about_badge_name: 'Revathi Krishna',
   about_badge_title: 'Founder & Principal Instructor',
   about_photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bharatanatyam_by_Amrita_Lahiri_%28104%29.jpg/800px-Bharatanatyam_by_Amrita_Lahiri_%28104%29.jpg',
+  stat1_title: 'Bharatanatyam', stat1_sub: 'Primary discipline',
+  stat2_title: 'Kuchipudi', stat2_sub: 'Secondary discipline',
+  stat3_title: 'All ages', stat3_sub: 'Beginners welcome',
   gallery_heading: 'The art, captured.',
   programs_heading: 'Every stage of the journey.',
   contact_heading: 'Begin your\njourney with us.',
@@ -70,6 +73,7 @@ export default function Landing() {
     bg: isDark ? '#0a0a0a' : '#ffffff',
     text: isDark ? '#f5f5f7' : '#1d1d1f',
     textMuted: isDark ? 'rgba(245,245,247,0.6)' : '#6e6e73',
+    textSubtle: isDark ? 'rgba(245,245,247,0.4)' : 'rgba(29,29,31,0.45)',
     navBg: isDark ? 'rgba(10,10,10,0.85)' : 'rgba(255,255,255,0.85)',
     navBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     navLink: isDark ? 'rgba(245,245,247,0.75)' : 'rgba(29,29,31,0.7)',
@@ -77,10 +81,33 @@ export default function Landing() {
     navBtnBg: isDark ? '#f5f5f7' : '#1d1d1f',
     navBtnText: isDark ? '#0a0a0a' : '#f5f5f7',
     sectionAlt: isDark ? '#111' : '#f5f5f7',
+    sectionDark: isDark ? '#0d0d0d' : '#f0f0f2',
     card: isDark ? '#1a1a1a' : '#ffffff',
     cardBorder: isDark ? 'rgba(255,255,255,0.06)' : '#e8e8ed',
+    cardDark: isDark ? '#141414' : '#ffffff',
+    cardDarkBorder: isDark ? 'rgba(245,245,247,0.07)' : '#e8e8ed',
+    cardDarkHoverBorder: isDark ? 'rgba(245,245,247,0.18)' : '#aaaaaa',
     menuBg: isDark ? '#0a0a0a' : '#ffffff',
     menuBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    marqueeBg: isDark ? '#111' : '#f0f0f2',
+    marqueeBorder: isDark ? '#1a1a1a' : '#e0e0e5',
+    marqueeText1: isDark ? 'rgba(245,245,247,0.35)' : 'rgba(29,29,31,0.35)',
+    marqueeText2: isDark ? 'rgba(245,245,247,0.15)' : 'rgba(29,29,31,0.15)',
+    footerBorder: isDark ? 'rgba(245,245,247,0.08)' : 'rgba(0,0,0,0.08)',
+    footerText: isDark ? 'rgba(245,245,247,0.4)' : 'rgba(29,29,31,0.5)',
+    footerSubtext: isDark ? 'rgba(245,245,247,0.25)' : 'rgba(29,29,31,0.4)',
+    testimonialBg: isDark ? '#0d0d0f' : '#f5f5f7',
+    testimonialCard: isDark ? '#1c1c1e' : '#ffffff',
+    testimonialText: isDark ? 'rgba(245,245,247,0.85)' : '#1d1d1f',
+    testimonialQuoteMark: isDark ? 'rgba(245,245,247,0.08)' : 'rgba(29,29,31,0.08)',
+    testimonialLabel: isDark ? 'rgba(245,245,247,0.4)' : '#6e6e73',
+    testimonialName: isDark ? '#f5f5f7' : '#1d1d1f',
+    testimonialRole: isDark ? 'rgba(245,245,247,0.45)' : '#86868b',
+    testimonialDot: isDark ? '#f5f5f7' : '#1d1d1f',
+    testimonialDotInactive: isDark ? 'rgba(245,245,247,0.2)' : '#e8e8ed',
+    testimonialBtn: isDark ? 'rgba(245,245,247,0.1)' : '#f5f5f7',
+    testimonialBtnBorder: isDark ? 'rgba(245,245,247,0.15)' : '#e8e8ed',
+    testimonialBtnText: isDark ? '#f5f5f7' : '#1d1d1f',
   };
 
   useEffect(() => {
@@ -185,7 +212,7 @@ export default function Landing() {
               </button>
             ))}
             <a href="/parent" style={{ color: T.text, fontSize: 17, textDecoration: 'none', padding: '10px 0' }}>Parent Portal</a>
-            <a href="/student" style={{ color: '#0a0a0a', background: '#f5f5f7', fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 8, display: 'inline-block', width: 'fit-content' }}>Student Portal</a>
+            <a href="/student" style={{ color: T.navBtnText, background: T.navBtnBg, fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 8, display: 'inline-block', width: 'fit-content' }}>Student Portal</a>
           </div>
         )}
       </nav>
@@ -222,10 +249,10 @@ export default function Landing() {
       </section>
 
       {/* ── MARQUEE ── */}
-      <div style={{ background: '#111', borderTop: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a', padding: '16px 0', overflow: 'hidden' }}>
+      <div style={{ background: T.marqueeBg, borderTop: `1px solid ${T.marqueeBorder}`, borderBottom: `1px solid ${T.marqueeBorder}`, padding: '16px 0', overflow: 'hidden' }}>
         <div style={{ display: 'flex', gap: 64, animation: 'marquee 28s linear infinite', whiteSpace: 'nowrap', width: 'max-content' }}>
           {Array(4).fill(['Classical','Devotional','Timeless','Bharatanatyam','Abhinaya','Nritta','Nritya','Nagaram, Hyderabad']).flat().map((text, i) => (
-            <span key={i} style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: i%2===0 ? 'rgba(245,245,247,0.35)' : 'rgba(245,245,247,0.15)' }}>{text}</span>
+            <span key={i} style={{ fontSize: 12, fontWeight: 500, letterSpacing: '0.2em', textTransform: 'uppercase', color: i%2===0 ? T.marqueeText1 : T.marqueeText2 }}>{text}</span>
           ))}
         </div>
       </div>
@@ -234,25 +261,29 @@ export default function Landing() {
       <section id="about" style={{ padding: 'clamp(80px, 12vw, 160px) max(24px, calc((100vw - 1100px)/2))' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 80, alignItems: 'center' }}>
           <div>
-            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 16 }}>About the Studio</p>
-            <h2 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1, color: '#f5f5f7', marginBottom: 28 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: T.textSubtle, textTransform: 'uppercase', marginBottom: 16 }}>About the Studio</p>
+            <h2 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1, color: T.text, marginBottom: 28 }}>
               {nl(s('about_heading', data))}
             </h2>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: 'rgba(245,245,247,0.6)', marginBottom: 20, fontWeight: 300 }}>{s('about_text', data)}</p>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: 'rgba(245,245,247,0.6)', fontWeight: 300 }}>{s('about_text2', data)}</p>
+            <p style={{ fontSize: 17, lineHeight: 1.75, color: T.textMuted, marginBottom: 20, fontWeight: 300 }}>{s('about_text', data)}</p>
+            <p style={{ fontSize: 17, lineHeight: 1.75, color: T.textMuted, fontWeight: 300 }}>{s('about_text2', data)}</p>
             <div style={{ marginTop: 40, display: 'flex', gap: 40, flexWrap: 'wrap' }}>
-              {[['Bharatanatyam','Primary discipline'],['Kuchipudi','Secondary discipline'],['All ages','Beginners welcome']].map(([title,sub]) => (
-                <div key={title}><p style={{ fontSize: 22, fontWeight: 700, color: '#f5f5f7', letterSpacing: '-0.03em' }}>{title}</p><p style={{ fontSize: 13, color: 'rgba(245,245,247,0.4)', marginTop: 2 }}>{sub}</p></div>
+              {[
+                [s('stat1_title', data) || 'Bharatanatyam', s('stat1_sub', data) || 'Primary discipline'],
+                [s('stat2_title', data) || 'Kuchipudi', s('stat2_sub', data) || 'Secondary discipline'],
+                [s('stat3_title', data) || 'All ages', s('stat3_sub', data) || 'Beginners welcome'],
+              ].map(([title,sub]) => (
+                <div key={title}><p style={{ fontSize: 22, fontWeight: 700, color: T.text, letterSpacing: '-0.03em' }}>{title}</p><p style={{ fontSize: 13, color: T.textSubtle, marginTop: 2 }}>{sub}</p></div>
               ))}
             </div>
           </div>
           <div style={{ position: 'relative' }}>
-            <div style={{ borderRadius: 20, overflow: 'hidden', boxShadow: '0 40px 80px rgba(0,0,0,0.6)', aspectRatio: '3/4', maxWidth: 420, margin: '0 auto' }}>
+            <div style={{ borderRadius: 20, overflow: 'hidden', boxShadow: isDark ? '0 40px 80px rgba(0,0,0,0.6)' : '0 20px 60px rgba(0,0,0,0.15)', aspectRatio: '3/4', maxWidth: 420, margin: '0 auto' }}>
               <img src={s('about_photo', data)} alt={s('about_badge_name', data)} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} loading="lazy" />
             </div>
-            <div style={{ position: 'absolute', bottom: 28, right: 0, background: 'rgba(245,245,247,0.05)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(245,245,247,0.1)', borderRadius: 14, padding: '14px 20px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.01em' }}>{s('about_badge_name', data)}</p>
-              <p style={{ fontSize: 11, color: 'rgba(245,245,247,0.45)', marginTop: 2 }}>{s('about_badge_title', data)}</p>
+            <div style={{ position: 'absolute', bottom: 28, right: 0, background: isDark ? 'rgba(245,245,247,0.05)' : 'rgba(255,255,255,0.9)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: `1px solid ${T.cardBorder}`, borderRadius: 14, padding: '14px 20px', boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.1)' }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: T.text, letterSpacing: '-0.01em' }}>{s('about_badge_name', data)}</p>
+              <p style={{ fontSize: 11, color: T.textMuted, marginTop: 2 }}>{s('about_badge_title', data)}</p>
             </div>
           </div>
         </div>
@@ -261,8 +292,8 @@ export default function Landing() {
       {/* ── GALLERY ── */}
       <section id="gallery" style={{ padding: 'clamp(60px, 8vw, 120px) max(24px, calc((100vw - 1200px)/2))' }}>
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 12 }}>Gallery</p>
-          <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7' }}>{s('gallery_heading', data)}</h2>
+          <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: T.textSubtle, textTransform: 'uppercase', marginBottom: 12 }}>Gallery</p>
+          <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 700, letterSpacing: '-0.03em', color: T.text }}>{s('gallery_heading', data)}</h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }} className="gallery-grid">
           {galleryWithSpans.map((photo, i) => (
@@ -276,26 +307,26 @@ export default function Landing() {
       </section>
 
       {/* ── PROGRAMS ── */}
-      <section id="programs" style={{ padding: 'clamp(60px, 8vw, 120px) max(24px, calc((100vw - 1100px)/2))', background: '#0d0d0d' }}>
+      <section id="programs" style={{ padding: 'clamp(60px, 8vw, 120px) max(24px, calc((100vw - 1100px)/2))', background: T.sectionDark }}>
         <div style={{ textAlign: 'center', marginBottom: 64 }}>
-          <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 12 }}>Programs</p>
-          <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7' }}>{s('programs_heading', data)}</h2>
+          <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: T.textSubtle, textTransform: 'uppercase', marginBottom: 12 }}>Programs</p>
+          <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 700, letterSpacing: '-0.03em', color: T.text }}>{s('programs_heading', data)}</h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 16 }}>
           {programs.map(prog => (
-            <div key={prog.title} style={{ background: '#141414', border: '1px solid rgba(245,245,247,0.07)', borderRadius: 18, padding: '32px 28px', transition: 'border-color 0.3s, transform 0.3s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(245,245,247,0.18)'; e.currentTarget.style.transform='translateY(-4px)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(245,245,247,0.07)'; e.currentTarget.style.transform='translateY(0)'; }}>
+            <div key={prog.title} style={{ background: T.cardDark, border: `1px solid ${T.cardDarkBorder}`, borderRadius: 18, padding: '32px 28px', transition: 'border-color 0.3s, transform 0.3s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor=T.cardDarkHoverBorder; e.currentTarget.style.transform='translateY(-4px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor=T.cardDarkBorder; e.currentTarget.style.transform='translateY(0)'; }}>
               <span style={{ fontSize: 32, display: 'block', marginBottom: 20 }}>{prog.icon}</span>
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'rgba(245,245,247,0.35)', display: 'block', marginBottom: 8 }}>{prog.level}</span>
-              <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: '#f5f5f7', marginBottom: 12 }}>{prog.title}</h3>
-              <p style={{ fontSize: 15, lineHeight: 1.7, color: 'rgba(245,245,247,0.5)', fontWeight: 300 }}>{prog.desc}</p>
+              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase', color: T.textSubtle, display: 'block', marginBottom: 8 }}>{prog.level}</span>
+              <h3 style={{ fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: T.text, marginBottom: 12 }}>{prog.title}</h3>
+              <p style={{ fontSize: 15, lineHeight: 1.7, color: T.textMuted, fontWeight: 300 }}>{prog.desc}</p>
             </div>
           ))}
         </div>
         <div style={{ textAlign: 'center', marginTop: 52 }}>
           <button onClick={() => scrollTo('contact')}
-            style={{ padding: '14px 32px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: '#f5f5f7', color: '#0a0a0a', border: 'none', cursor: 'pointer', transition: 'opacity 0.2s' }}
+            style={{ padding: '14px 32px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: T.navBtnBg, color: T.navBtnText, border: 'none', cursor: 'pointer', transition: 'opacity 0.2s' }}
             onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
             Enquire About Enrollment
           </button>
@@ -304,13 +335,13 @@ export default function Landing() {
 
       {/* ── TESTIMONIALS ── */}
       {testimonials.length > 0 && (
-      <section style={{ background: '#0d0d0f', padding: 'clamp(60px, 8vw, 100px) max(24px, calc((100vw - 1100px)/2))', overflow: 'hidden' }}>
-        <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.2em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 12 }}>Testimonials</p>
-        <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7', marginBottom: 48, lineHeight: 1.15 }}>Hear from our community.</h2>
+      <section style={{ background: T.testimonialBg, padding: 'clamp(60px, 8vw, 100px) max(24px, calc((100vw - 1100px)/2))', overflow: 'hidden' }}>
+        <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.2em', color: T.textSubtle, textTransform: 'uppercase', marginBottom: 12 }}>Testimonials</p>
+        <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 700, letterSpacing: '-0.03em', color: T.text, marginBottom: 48, lineHeight: 1.15 }}>Hear from our community.</h2>
 
         <div style={{ position: 'relative', maxWidth: 720, margin: '0 auto' }}>
           {/* Card */}
-          <div style={{ background: '#1c1c1e', borderRadius: 24, padding: 'clamp(28px, 5vw, 48px)', boxShadow: '0 20px 60px rgba(0,0,0,0.4)', minHeight: 220, transition: 'all 0.4s ease' }}>
+          <div style={{ background: T.testimonialCard, borderRadius: 24, padding: 'clamp(28px, 5vw, 48px)', boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.1)', minHeight: 220, transition: 'all 0.4s ease' }}>
             {/* Stars */}
             <div style={{ marginBottom: 20 }}>
               {Array.from({ length: testimonials[testimonialIdx]?.stars || 5 }).map((_, i) => (
@@ -318,24 +349,24 @@ export default function Landing() {
               ))}
             </div>
             {/* Quote mark */}
-            <div style={{ fontSize: 60, color: 'rgba(245,245,247,0.08)', lineHeight: 1, marginBottom: -12, fontFamily: 'Georgia, serif' }}>"</div>
+            <div style={{ fontSize: 60, color: T.testimonialQuoteMark, lineHeight: 1, marginBottom: -12, fontFamily: 'Georgia, serif' }}>"</div>
             {/* Text */}
-            <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: 'rgba(245,245,247,0.85)', lineHeight: 1.75, fontStyle: 'italic', marginBottom: 28 }}>
+            <p style={{ fontSize: 'clamp(15px, 2vw, 18px)', color: T.testimonialText, lineHeight: 1.75, fontStyle: 'italic', marginBottom: 28 }}>
               {testimonials[testimonialIdx]?.text}
             </p>
             {/* Person */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               {testimonials[testimonialIdx]?.photo ? (
                 <img src={testimonials[testimonialIdx].photo} alt={testimonials[testimonialIdx].name}
-                  style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(245,245,247,0.1)' }} />
+                  style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', border: `2px solid ${T.cardBorder}` }} />
               ) : (
-                <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(245,245,247,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: 'rgba(245,245,247,0.6)' }}>
+                <div style={{ width: 48, height: 48, borderRadius: '50%', background: T.sectionAlt, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: T.textMuted }}>
                   {(testimonials[testimonialIdx]?.name || '?')[0]}
                 </div>
               )}
               <div>
-                <p style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7' }}>{testimonials[testimonialIdx]?.name}</p>
-                <p style={{ fontSize: 13, color: 'rgba(245,245,247,0.45)', marginTop: 2 }}>{testimonials[testimonialIdx]?.role}</p>
+                <p style={{ fontSize: 15, fontWeight: 600, color: T.testimonialName }}>{testimonials[testimonialIdx]?.name}</p>
+                <p style={{ fontSize: 13, color: T.testimonialRole, marginTop: 2 }}>{testimonials[testimonialIdx]?.role}</p>
               </div>
             </div>
           </div>
@@ -346,14 +377,14 @@ export default function Landing() {
               <div style={{ display: 'flex', gap: 8 }}>
                 {testimonials.map((_, i) => (
                   <button key={i} onClick={() => setTestimonialIdx(i)}
-                    style={{ width: i === testimonialIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === testimonialIdx ? '#f5f5f7' : 'rgba(245,245,247,0.2)', border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', padding: 0 }} />
+                    style={{ width: i === testimonialIdx ? 24 : 8, height: 8, borderRadius: 4, background: i === testimonialIdx ? T.testimonialDot : T.testimonialDotInactive, border: 'none', cursor: 'pointer', transition: 'all 0.3s ease', padding: 0 }} />
                 ))}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => setTestimonialIdx(i => (i - 1 + testimonials.length) % testimonials.length)}
-                  style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(245,245,247,0.1)', border: '1px solid rgba(245,245,247,0.15)', color: '#f5f5f7', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+                  style={{ width: 44, height: 44, borderRadius: '50%', background: T.testimonialBtn, border: `1px solid ${T.testimonialBtnBorder}`, color: T.testimonialBtnText, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
                 <button onClick={() => setTestimonialIdx(i => (i + 1) % testimonials.length)}
-                  style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(245,245,247,0.1)', border: '1px solid rgba(245,245,247,0.15)', color: '#f5f5f7', fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+                  style={{ width: 44, height: 44, borderRadius: '50%', background: T.testimonialBtn, border: `1px solid ${T.testimonialBtnBorder}`, color: T.testimonialBtnText, fontSize: 18, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
               </div>
             </div>
           )}
@@ -412,9 +443,9 @@ export default function Landing() {
       <section id="contact" style={{ padding: 'clamp(80px, 10vw, 140px) max(24px, calc((100vw - 1100px)/2))' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 80, alignItems: 'start' }}>
           <div>
-            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 16 }}>Contact</p>
-            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7', marginBottom: 24, lineHeight: 1.15 }}>{nl(s('contact_heading', data))}</h2>
-            <p style={{ fontSize: 17, lineHeight: 1.75, color: 'rgba(245,245,247,0.55)', fontWeight: 300 }}>{s('contact_text', data)}</p>
+            <p style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.18em', color: T.textSubtle, textTransform: 'uppercase', marginBottom: 16 }}>Contact</p>
+            <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 48px)', fontWeight: 700, letterSpacing: '-0.03em', color: T.text, marginBottom: 24, lineHeight: 1.15 }}>{nl(s('contact_heading', data))}</h2>
+            <p style={{ fontSize: 17, lineHeight: 1.75, color: T.textMuted, fontWeight: 300 }}>{s('contact_text', data)}</p>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
@@ -423,13 +454,13 @@ export default function Landing() {
               { icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, label:'Hours', value: s('contact_hours', data), href: null },
             ].map(item => (
               <a key={item.label} href={item.href || '#'} target={item.href?.startsWith('http') ? '_blank' : undefined} rel="noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '22px 24px', borderRadius: 16, background: '#141414', border: '1px solid rgba(245,245,247,0.07)', textDecoration: 'none', transition: 'border-color 0.25s, transform 0.25s' }}
-                onMouseEnter={e => { if(item.href){e.currentTarget.style.borderColor='rgba(245,245,247,0.18)';e.currentTarget.style.transform='translateX(6px)';} }}
-                onMouseLeave={e => {e.currentTarget.style.borderColor='rgba(245,245,247,0.07)';e.currentTarget.style.transform='translateX(0)';}}>
-                <div style={{ color: 'rgba(245,245,247,0.4)', flexShrink: 0 }}>{item.icon}</div>
+                style={{ display: 'flex', alignItems: 'center', gap: 20, padding: '22px 24px', borderRadius: 16, background: T.cardDark, border: `1px solid ${T.cardDarkBorder}`, textDecoration: 'none', transition: 'border-color 0.25s, transform 0.25s' }}
+                onMouseEnter={e => { if(item.href){e.currentTarget.style.borderColor=T.cardDarkHoverBorder;e.currentTarget.style.transform='translateX(6px)';} }}
+                onMouseLeave={e => {e.currentTarget.style.borderColor=T.cardDarkBorder;e.currentTarget.style.transform='translateX(0)';}}>
+                <div style={{ color: T.textSubtle, flexShrink: 0 }}>{item.icon}</div>
                 <div>
-                  <p style={{ fontSize: 11, color: 'rgba(245,245,247,0.3)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</p>
-                  <p style={{ fontSize: 16, color: '#f5f5f7', fontWeight: 400, letterSpacing: '-0.01em' }}>{item.value}</p>
+                  <p style={{ fontSize: 11, color: T.textSubtle, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>{item.label}</p>
+                  <p style={{ fontSize: 16, color: T.text, fontWeight: 400, letterSpacing: '-0.01em' }}>{item.value}</p>
                 </div>
               </a>
             ))}
@@ -462,17 +493,17 @@ export default function Landing() {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop: '1px solid rgba(245,245,247,0.08)', padding: '40px max(24px, calc((100vw - 1100px)/2))' }}>
+      <footer style={{ borderTop: `1px solid ${T.footerBorder}`, padding: '40px max(24px, calc((100vw - 1100px)/2))' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span>🪷</span>
-            <span style={{ fontSize: 13, color: 'rgba(245,245,247,0.4)' }}>Tritiya Dance Studio · Nagaram, Hyderabad</span>
+            <span style={{ fontSize: 13, color: T.footerText }}>Tritiya Dance Studio · Nagaram, Hyderabad</span>
           </div>
-          <p style={{ fontSize: 12, color: 'rgba(245,245,247,0.25)' }}>© {new Date().getFullYear()} Tritiya Dance Studio · {s('about_badge_name', data)}</p>
+          <p style={{ fontSize: 12, color: T.footerSubtext }}>© {new Date().getFullYear()} Tritiya Dance Studio · {s('about_badge_name', data)}</p>
           <div style={{ display: 'flex', gap: 24 }}>
-            <a href={`tel:${s('contact_phone',data)}`} style={{ fontSize: 12, color: 'rgba(245,245,247,0.35)', textDecoration: 'none' }}>{s('contact_phone',data)}</a>
-            <a href="/parent" style={{ fontSize: 12, color: 'rgba(245,245,247,0.35)', textDecoration: 'none' }}>Parent Portal</a>
-            <a href="/student" style={{ fontSize: 12, color: 'rgba(245,245,247,0.35)', textDecoration: 'none' }}>Student Portal</a>
+            <a href={`tel:${s('contact_phone',data)}`} style={{ fontSize: 12, color: T.footerText, textDecoration: 'none' }}>{s('contact_phone',data)}</a>
+            <a href="/parent" style={{ fontSize: 12, color: T.footerText, textDecoration: 'none' }}>Parent Portal</a>
+            <a href="/student" style={{ fontSize: 12, color: T.footerText, textDecoration: 'none' }}>Student Portal</a>
           </div>
         </div>
       </footer>
@@ -480,7 +511,7 @@ export default function Landing() {
       <style>{`
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html { scroll-behavior: smooth; }
-        body { background: #0a0a0a !important; }
+        body { background: ${T.bg} !important; transition: background 0.3s; }
         @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
         @keyframes fadeInDown { 0%{opacity:0.6;transform:translateY(-6px)} 100%{opacity:0;transform:translateY(6px)} }
         @media (max-width: 768px) {

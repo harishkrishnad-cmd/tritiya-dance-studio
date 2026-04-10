@@ -1,15 +1,19 @@
+/**
+ * SignupPage — teacher sends /signup/:token to parents.
+ * Uses the same enrollment_links system as EnrollPage but
+ * framed as "Create Account" rather than "Student Enrollment".
+ */
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Kuchipudi'];
 
-export default function EnrollPage() {
+export default function SignupPage() {
   const { token } = useParams();
   const [info, setInfo] = useState(null);
   const [error, setError] = useState('');
-  const [step, setStep] = useState(1); // 1=student, 2=parent, 3=payment, 4=done
+  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [paid, setPaid] = useState(false);
   const [form, setForm] = useState({
     student_name: '', date_of_birth: '', level: 'Beginner',
@@ -20,7 +24,7 @@ export default function EnrollPage() {
     fetch(`/api/enroll/info/${token}`)
       .then(r => r.json())
       .then(d => { if (d.valid) setInfo(d); else setError(d.error || 'Invalid link'); })
-      .catch(() => setError('Unable to load enrollment form. Please check the link.'));
+      .catch(() => setError('Unable to load signup form. Please check the link.'));
   }, [token]);
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
@@ -33,15 +37,17 @@ export default function EnrollPage() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); setLoading(false); return; }
-      setSubmitted(true); setStep(4);
+      setStep(4);
     } catch { setError('Submission failed. Please try again.'); }
     setLoading(false);
   }
 
-  const fontStyle = { fontFamily: "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" };
+  const font = { fontFamily: "-apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif" };
+  const inputStyle = { width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7', fontFamily: 'inherit' };
+  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 };
 
   if (error && !info) return (
-    <div style={{ ...fontStyle, minHeight: '100svh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div style={{ ...font, minHeight: '100svh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ textAlign: 'center', maxWidth: 360 }}>
         <div style={{ fontSize: 40, marginBottom: 16 }}>🔗</div>
         <h1 style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f', marginBottom: 8 }}>Link Not Found</h1>
@@ -51,23 +57,20 @@ export default function EnrollPage() {
   );
 
   if (!info) return (
-    <div style={{ ...fontStyle, minHeight: '100svh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ ...font, minHeight: '100svh', background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ textAlign: 'center', color: '#86868b', fontSize: 14 }}>Loading…</div>
     </div>
   );
 
-  const inputStyle = { width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid #e8e8ed', fontSize: 14, outline: 'none', boxSizing: 'border-box', background: '#f5f5f7', fontFamily: 'inherit' };
-  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 };
-
   return (
-    <div style={{ ...fontStyle, minHeight: '100svh', background: '#f5f5f7' }}>
+    <div style={{ ...font, minHeight: '100svh', background: '#f5f5f7' }}>
       {/* Header */}
       <div style={{ background: '#1c1c1e', padding: '20px max(20px, calc((100vw - 520px)/2))' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 24 }}>🪷</span>
           <div>
             <p style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>{info.school_name}</p>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Student Enrollment Form</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>Parent Sign Up</p>
           </div>
         </div>
       </div>
@@ -84,7 +87,7 @@ export default function EnrollPage() {
         {step === 1 && (
           <div style={{ background: '#fff', borderRadius: 18, padding: 28, boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
             <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>Student Details</h2>
-            <p style={{ fontSize: 13, color: '#86868b', marginBottom: 24 }}>Tell us about the student joining Tritiya Dance Studio.</p>
+            <p style={{ fontSize: 13, color: '#86868b', marginBottom: 24 }}>Tell us about the student who will be joining.</p>
             {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>Student Full Name *</label>
@@ -112,16 +115,16 @@ export default function EnrollPage() {
         {/* Step 2: Parent Details */}
         {step === 2 && (
           <div style={{ background: '#fff', borderRadius: 18, padding: 28, boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>Parent / Guardian Details</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>Your Details</h2>
             <p style={{ fontSize: 13, color: '#86868b', marginBottom: 24 }}>Your login credentials will be sent to this email.</p>
             {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
             <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Parent / Guardian Full Name *</label>
+              <label style={labelStyle}>Your Full Name *</label>
               <input style={inputStyle} value={form.parent_name} onChange={e => set('parent_name', e.target.value)} placeholder="e.g. Priya Sharma" />
             </div>
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>Email Address *</label>
-              <input style={inputStyle} type="email" value={form.parent_email} onChange={e => set('parent_email', e.target.value)} placeholder="parent@example.com" />
+              <input style={inputStyle} type="email" value={form.parent_email} onChange={e => set('parent_email', e.target.value)} placeholder="you@example.com" />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
               <div>
@@ -134,13 +137,12 @@ export default function EnrollPage() {
               </div>
             </div>
             <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Any notes or special requirements</label>
+              <label style={labelStyle}>Notes</label>
               <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: 64 }} value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="Any health conditions, previous training, etc." rows={2} />
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setStep(1)}
-                style={{ padding: '12px 20px', background: '#f5f5f7', border: 'none', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
-              <button onClick={() => { setError(''); if (!form.parent_name.trim() || !form.parent_email.trim()) { setError('Parent name and email are required'); return; } setStep(3); }}
+              <button onClick={() => setStep(1)} style={{ padding: '12px 20px', background: '#f5f5f7', border: 'none', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
+              <button onClick={() => { setError(''); if (!form.parent_name.trim() || !form.parent_email.trim()) { setError('Name and email are required'); return; } setStep(3); }}
                 style={{ flex: 1, padding: '13px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer' }}>
                 Continue →
               </button>
@@ -148,12 +150,12 @@ export default function EnrollPage() {
           </div>
         )}
 
-        {/* Step 3: Payment + Confirm */}
+        {/* Step 3: Confirm + Payment */}
         {step === 3 && (
           <div>
             <div style={{ background: '#fff', borderRadius: 18, padding: 28, boxShadow: '0 2px 16px rgba(0,0,0,0.07)', marginBottom: 16 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>Review & Payment</h2>
-              <p style={{ fontSize: 13, color: '#86868b', marginBottom: 20 }}>Verify your details and make the first payment via UPI.</p>
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>Confirm & Pay</h2>
+              <p style={{ fontSize: 13, color: '#86868b', marginBottom: 20 }}>Review your details and complete the first payment.</p>
               <div style={{ background: '#f5f5f7', borderRadius: 12, padding: 16, marginBottom: 20 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                   <span style={{ fontSize: 13, color: '#86868b' }}>Student</span>
@@ -164,7 +166,7 @@ export default function EnrollPage() {
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{form.level}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 13, color: '#86868b' }}>Parent Email</span>
+                  <span style={{ fontSize: 13, color: '#86868b' }}>Your Email</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{form.parent_email}</span>
                 </div>
               </div>
@@ -183,11 +185,10 @@ export default function EnrollPage() {
                 </span>
               </label>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button onClick={() => setStep(2)}
-                  style={{ padding: '12px 20px', background: '#f5f5f7', border: 'none', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
+                <button onClick={() => setStep(2)} style={{ padding: '12px 20px', background: '#f5f5f7', border: 'none', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
                 <button onClick={submit} disabled={loading || !paid}
-                  style={{ flex: 1, padding: '13px', background: '#34c759', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: paid ? 'pointer' : 'not-allowed', opacity: (loading || !paid) ? 0.5 : 1, transition: 'opacity 0.2s' }}>
-                  {loading ? 'Submitting…' : '✓ Complete Enrollment'}
+                  style={{ flex: 1, padding: '13px', background: '#34c759', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: paid ? 'pointer' : 'not-allowed', opacity: (loading || !paid) ? 0.5 : 1 }}>
+                  {loading ? 'Creating account…' : '✓ Create My Account'}
                 </button>
               </div>
             </div>
@@ -200,13 +201,14 @@ export default function EnrollPage() {
             <div style={{ width: 72, height: 72, background: '#f0fff4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 20px' }}>🎉</div>
             <h2 style={{ fontSize: 22, fontWeight: 700, color: '#1d1d1f', marginBottom: 8 }}>Welcome to {info.school_name}!</h2>
             <p style={{ fontSize: 14, color: '#6e6e73', lineHeight: 1.7, marginBottom: 24 }}>
-              Enrollment is complete. A welcome email with your <strong>Parent Portal login credentials</strong> has been sent to <strong>{form.parent_email}</strong>. Please check your inbox (and spam folder).
+              Your account has been created. A welcome email with your <strong>Parent Portal login credentials</strong> has been sent to <strong>{form.parent_email}</strong>. Please check your inbox (and spam folder).
             </p>
             <div style={{ background: '#f5f5f7', borderRadius: 12, padding: 16, marginBottom: 24, textAlign: 'left' }}>
               <p style={{ fontSize: 13, color: '#86868b', marginBottom: 4 }}>What's next?</p>
               <p style={{ fontSize: 14, color: '#1d1d1f', lineHeight: 1.7 }}>✓ Check your email for login details<br/>✓ Log in to the Parent Portal to track attendance & fees<br/>✓ Your teacher will confirm the class schedule</p>
             </div>
-            <a href="/" style={{ display: 'inline-block', padding: '12px 28px', background: '#1c1c1e', color: '#fff', borderRadius: 10, fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>← Back to Studio Website</a>
+            <a href="/parent" style={{ display: 'inline-block', padding: '12px 28px', background: '#0071e3', color: '#fff', borderRadius: 10, fontSize: 14, fontWeight: 500, textDecoration: 'none', marginRight: 12 }}>Go to Parent Portal</a>
+            <a href="/" style={{ display: 'inline-block', padding: '12px 28px', background: '#1c1c1e', color: '#fff', borderRadius: 10, fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>← Back to Studio</a>
           </div>
         )}
       </div>
