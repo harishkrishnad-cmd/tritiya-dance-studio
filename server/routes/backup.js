@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database');
-const { verifyToken } = require('../auth');
+const { verifyToken } = require('./auth');
 
 function adminOnly(req, res, next) {
   const auth = req.headers.authorization;
