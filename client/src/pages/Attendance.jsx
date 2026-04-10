@@ -1,6 +1,28 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { ClipboardCheck, CheckCircle, XCircle, Clock, CheckSquare, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ClipboardCheck, CheckCircle, XCircle, Clock, CheckSquare, ChevronLeft, ChevronRight, FileSpreadsheet, Upload, Download, X, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import Modal from '../components/Modal';
 import { api } from '../api';
+
+const ATT_COLS = [
+  { key: 'class_name', label: 'Class Name' },
+  { key: 'date', label: 'Date (YYYY-MM-DD)' },
+  { key: 'student_name', label: 'Student Name' },
+  { key: 'status', label: 'Status (present/absent/late)' },
+  { key: 'notes', label: 'Notes' },
+];
+
+function downloadAttTemplate() {
+  const ws = XLSX.utils.aoa_to_sheet([
+    ATT_COLS.map(c => c.label),
+    ['Beginners Bharatanatyam', '2026-04-07', 'Priya Sharma', 'present', ''],
+    ['Beginners Bharatanatyam', '2026-04-07', 'Ananya Rao', 'absent', 'Sick leave'],
+    ['Intermediate Kuchipudi', '2026-04-09', 'Meera Reddy', 'late', 'Arrived 10 min late'],
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Attendance');
+  XLSX.writeFile(wb, 'attendance_template.xlsx');
+}
 
 const STATUS = {
   present: { label:'Present', icon:CheckCircle, color:'bg-green-50 border-apple-green/30 text-apple-green' },
@@ -18,6 +40,13 @@ export default function Attendance() {
   const [saved, setSaved] = useState(false);
   const [sessions, setSessions] = useState([]);
   const [tab, setTab] = useState('mark');
+  const [importOpen, setImportOpen] = useState(false);
+  const [importRows, setImportRows] = useState([]);
+  const [importErrors, setImportErrors] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileRef = useRef();
 
   useEffect(()=>{ api.getClasses().then(setClasses); },[]);
   useEffect(()=>{ if(selClass) api.getSessions({class_id:selClass}).then(setSessions); },[selClass]);
@@ -44,6 +73,53 @@ export default function Attendance() {
   }
   function shiftDate(d) { const dt=new Date(selDate); dt.setDate(dt.getDate()+d); setSelDate(dt.toISOString().split('T')[0]); }
 
+  function parseAttFile(file) {
+    setImportResult(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const normalised = raw.map(r => {
+        const out = {};
+        for (const [k, v] of Object.entries(r)) {
+          const key = k.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
+          const col = ATT_COLS.find(c => c.label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '') === key || c.key === key);
+          if (col) out[col.key] = String(v).trim();
+        }
+        return out;
+      }).filter(r => r.class_name && r.date && r.student_name && r.status);
+      const VALID = ['present', 'absent', 'late'];
+      const errs = [];
+      normalised.forEach((r, i) => {
+        if (!VALID.includes(r.status.toLowerCase())) errs.push(`Row ${i+2}: Status must be present/absent/late (got "${r.status}")`);
+      });
+      setImportRows(normalised);
+      setImportErrors(errs);
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  function handleAttFile(file) {
+    if (!file) return;
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) { alert('Please upload an Excel or CSV file'); return; }
+    parseAttFile(file);
+  }
+
+  async function doImport() {
+    if (!importRows.length || importErrors.length) return;
+    setImporting(true);
+    try {
+      const r = await api.bulkImportAttendance(importRows);
+      setImportResult({ success: true, count: r.imported, skipped: r.skipped });
+      setImportRows([]);
+      if (selClass) api.getSessions({ class_id: selClass }).then(setSessions);
+    } catch (e) {
+      setImportResult({ success: false, error: e.message });
+    }
+    setImporting(false);
+  }
+
   const present=Object.values(att).filter(s=>s==='present').length;
   const absent=Object.values(att).filter(s=>s==='absent').length;
   const late=Object.values(att).filter(s=>s==='late').length;
@@ -51,10 +127,81 @@ export default function Attendance() {
 
   return (
     <div className="space-y-4 max-w-3xl">
-      <div>
-        <h1 className="text-xl font-semibold text-apple-text tracking-tight">Attendance</h1>
-        <p className="text-xs text-apple-gray-5 mt-0.5">Mark and view student attendance</p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h1 className="text-xl font-semibold text-apple-text tracking-tight">Attendance</h1>
+          <p className="text-xs text-apple-gray-5 mt-0.5">Mark and view student attendance</p>
+        </div>
+        <button onClick={() => { setImportOpen(true); setImportRows([]); setImportErrors([]); setImportResult(null); }} className="btn-secondary flex items-center gap-1.5 text-sm"><FileSpreadsheet size={13}/> Import Excel</button>
       </div>
+
+      {/* Import Modal */}
+      <Modal isOpen={importOpen} onClose={() => setImportOpen(false)} title="Import Attendance from Excel" size="lg">
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <button onClick={downloadAttTemplate} className="btn-secondary flex items-center gap-1.5 text-xs"><Download size={12}/> Download Template</button>
+          </div>
+          {importResult && (
+            <div className={`flex items-start gap-3 p-3 rounded-apple-sm ${importResult.success ? 'bg-green-50 border-l-4 border-apple-green' : 'bg-red-50 border-l-4 border-apple-red'}`}>
+              {importResult.success
+                ? <><CheckCircle size={16} className="text-apple-green shrink-0 mt-0.5"/><div><p className="font-medium text-apple-text text-sm">{importResult.count} record{importResult.count !== 1 ? 's' : ''} imported</p>{importResult.skipped > 0 && <p className="text-xs text-apple-gray-5">{importResult.skipped} skipped (student/class not found or invalid)</p>}</div></>
+                : <><AlertCircle size={16} className="text-apple-red shrink-0 mt-0.5"/><p className="text-sm text-apple-text">{importResult.error}</p></>}
+            </div>
+          )}
+          {!importRows.length ? (
+            <div
+              className={`border-2 border-dashed rounded-apple-sm text-center py-10 cursor-pointer transition-all ${dragOver ? 'border-apple-blue bg-blue-50' : 'border-apple-gray-2 hover:border-apple-blue/40'}`}
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => { e.preventDefault(); setDragOver(false); handleAttFile(e.dataTransfer.files[0]); }}
+              onClick={() => fileRef.current?.click()}
+            >
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => handleAttFile(e.target.files[0])} />
+              <FileSpreadsheet size={32} className="mx-auto text-apple-blue mb-2 opacity-70"/>
+              <p className="font-medium text-apple-text text-sm">Drop your Excel file here or click to browse</p>
+              <p className="text-xs text-apple-gray-4 mt-1">Columns: Class Name, Date, Student Name, Status (present/absent/late), Notes</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-apple-text">{importRows.length} record{importRows.length !== 1 ? 's' : ''} ready to import</p>
+                <button onClick={() => { setImportRows([]); setImportErrors([]); }} className="text-xs text-apple-gray-4 hover:text-apple-red flex items-center gap-1"><X size={12}/> Clear</button>
+              </div>
+              {importErrors.length > 0 && (
+                <div className="bg-orange-50 border-l-4 border-apple-orange p-3 rounded-apple-sm space-y-1">
+                  <p className="text-xs font-medium text-apple-text">{importErrors.length} issue{importErrors.length !== 1 ? 's' : ''} found</p>
+                  {importErrors.map((e, i) => <p key={i} className="text-xs text-apple-gray-5">• {e}</p>)}
+                </div>
+              )}
+              <div className="overflow-x-auto border border-apple-gray-2 rounded-apple-sm">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-apple-gray border-b border-apple-gray-2">
+                    {['Class','Date','Student','Status','Notes'].map(h => <th key={h} className="text-left px-3 py-2 text-apple-gray-5 font-semibold uppercase text-[10px] whitespace-nowrap">{h}</th>)}
+                  </tr></thead>
+                  <tbody className="divide-y divide-apple-gray-2/60">
+                    {importRows.slice(0, 15).map((r, i) => (
+                      <tr key={i} className="hover:bg-apple-gray/40">
+                        <td className="px-3 py-2 text-apple-text">{r.class_name}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.date}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.student_name}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status==='present'?'bg-green-100 text-apple-green':r.status==='absent'?'bg-red-100 text-apple-red':'bg-orange-100 text-apple-orange'}`}>{r.status}</span>
+                        </td>
+                        <td className="px-3 py-2 text-apple-gray-5">{r.notes || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {importRows.length > 15 && <p className="text-xs text-apple-gray-5 px-3 py-2 border-t border-apple-gray-2">… and {importRows.length - 15} more</p>}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-apple-gray-2">
+          <button className="btn-secondary" onClick={() => setImportOpen(false)}>Cancel</button>
+          {importRows.length > 0 && <button className="btn-primary flex items-center gap-1.5" onClick={doImport} disabled={importing || importErrors.length > 0}><Upload size={13}/>{importing ? 'Importing…' : `Import ${importRows.length} Records`}</button>}
+        </div>
+      </Modal>
 
       <div className="card grid sm:grid-cols-2 gap-3">
         <div>

@@ -177,18 +177,33 @@ export default function EnrollPage() {
               )}
               {/* UPI AutoPay */}
               <div style={{ background: '#f0f7ff', border: '1px solid #d0e8ff', borderRadius: 12, padding: 16, marginBottom: 20 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', marginBottom: 4 }}>🔄 Set Up Monthly Auto-Payment</p>
-                <p style={{ fontSize: 12, color: '#555', marginBottom: 12, lineHeight: 1.6 }}>
-                  Like Netflix — set up a recurring ₹1,000/month so you never miss a payment. Your UPI app auto-debits on the same day every month.
+                <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', marginBottom: 2 }}>🔄 Set Up Monthly Auto-Payment</p>
+                <p style={{ fontSize: 12, color: '#555', marginBottom: 14, lineHeight: 1.6 }}>
+                  Like Netflix — tap your UPI app below to set up ₹1,000/month auto-debit. Never miss a payment again!
                 </p>
-                <a
-                  href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
-                  style={{ display: 'block', width: '100%', padding: '11px 16px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, textAlign: 'center', textDecoration: 'none', marginBottom: 10, boxSizing: 'border-box' }}>
-                  🔄 Set Up Auto-Pay — ₹1,000/month
-                </a>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 12 }}>
+                  <a href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg,#4285F4,#34A853)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>G</div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>Google Pay</span>
+                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000/mo</span>
+                  </a>
+                  <a href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#5f259f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>P</div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>PhonePe</span>
+                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000/mo</span>
+                  </a>
+                  <a href="upi://mandate?pa=9398350275@upi&pn=Tritiya+Dance+Studio&am=1000&cu=INR&mc=0000&mn=Monthly+Dance+Fee&mam=1000&recur=monthly&validity=P12M"
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 6px', background: '#fff', border: '2px solid #e8e8ed', borderRadius: 12, textDecoration: 'none', cursor: 'pointer' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 10, background: '#00B9F1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>T</div>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: '#1d1d1f', textAlign: 'center' }}>Paytm</span>
+                    <span style={{ fontSize: 10, color: '#86868b' }}>₹1,000/mo</span>
+                  </a>
+                </div>
                 <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', lineHeight: 1.5 }}>
-                  Opens your UPI app (Google Pay / PhonePe / Paytm) to authorize a monthly recurring payment.<br/>
-                  UPI ID: <strong>9398350275@upi</strong> · Amount: ₹1,000/month
+                  Tap your app — it opens with ₹1,000/month auto-debit pre-filled<br/>
+                  UPI ID: <strong style={{ color: '#333' }}>9398350275@upi</strong>
                 </p>
               </div>
               {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}

@@ -118,4 +118,47 @@ router.get('/stats/class/:classId', (req, res) => {
   res.json(stats);
 });
 
+// Bulk import attendance from Excel
+router.post('/bulk-import', (req, res) => {
+  const { records } = req.body;
+  if (!Array.isArray(records)) return res.status(400).json({ error: 'records must be an array' });
+  let imported = 0, skipped = 0;
+  const VALID_STATUS = ['present', 'absent', 'late'];
+
+  const tx = db.transaction(() => {
+    for (const row of records) {
+      if (!row.class_name || !row.date || !row.student_name || !row.status) { skipped++; continue; }
+      const status = String(row.status).toLowerCase().trim();
+      if (!VALID_STATUS.includes(status)) { skipped++; continue; }
+
+      // Look up class by name
+      const cls = db.prepare('SELECT id FROM classes WHERE name = ? AND active = 1').get(String(row.class_name).trim());
+      if (!cls) { skipped++; continue; }
+
+      // Look up student by name
+      const student = db.prepare('SELECT id FROM students WHERE name LIKE ? AND active = 1').get(String(row.student_name).trim());
+      if (!student) { skipped++; continue; }
+
+      // Get or create session
+      const existing = db.prepare('SELECT id FROM class_sessions WHERE class_id = ? AND session_date = ?').get(cls.id, row.date.trim());
+      let sessionId;
+      if (existing) {
+        sessionId = existing.id;
+      } else {
+        const r = db.prepare('INSERT INTO class_sessions (class_id, session_date, status) VALUES (?, ?, ?)').run(cls.id, row.date.trim(), 'completed');
+        sessionId = r.lastInsertRowid;
+      }
+
+      // Upsert attendance
+      db.prepare(`
+        INSERT INTO attendance (session_id, student_id, status, notes) VALUES (?, ?, ?, ?)
+        ON CONFLICT(session_id, student_id) DO UPDATE SET status=excluded.status, notes=excluded.notes
+      `).run(sessionId, student.id, status, row.notes || null);
+      imported++;
+    }
+  });
+  tx();
+  res.json({ imported, skipped });
+});
+
 module.exports = router;

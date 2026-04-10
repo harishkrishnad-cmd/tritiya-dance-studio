@@ -111,4 +111,39 @@ router.post('/:id/remind', async (req, res) => {
   res.json(result);
 });
 
+// Bulk import payments received (manually entered from Excel)
+router.post('/bulk-import', (req, res) => {
+  const { payments: rows } = req.body;
+  if (!Array.isArray(rows)) return res.status(400).json({ error: 'payments must be an array' });
+  let imported = 0, skipped = 0;
+  const VALID_STATUS = ['paid', 'pending', 'overdue'];
+  const VALID_METHODS = ['cash', 'upi', 'bank transfer', 'cheque', 'online'];
+
+  const tx = db.transaction(() => {
+    for (const row of rows) {
+      if (!row.student_name || !row.amount || !row.date) { skipped++; continue; }
+
+      const student = db.prepare('SELECT id, monthly_fee FROM students WHERE name LIKE ? AND active = 1').get(String(row.student_name).trim());
+      if (!student) { skipped++; continue; }
+
+      const amount = parseFloat(row.amount);
+      if (isNaN(amount) || amount <= 0) { skipped++; continue; }
+
+      const status = VALID_STATUS.includes(String(row.status || 'paid').toLowerCase()) ? String(row.status || 'paid').toLowerCase() : 'paid';
+      const method = row.payment_method ? String(row.payment_method).trim() : 'Cash';
+      const paidDate = status === 'paid' ? (row.paid_date || row.date).trim() : null;
+      const dueDate = row.date.trim();
+      const description = row.description || `Manual import — ${new Date(dueDate).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}`;
+
+      db.prepare(`
+        INSERT INTO payments (student_id, amount, due_date, paid_date, description, payment_method, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(student.id, amount, dueDate, paidDate, description, method, status);
+      imported++;
+    }
+  });
+  tx();
+  res.json({ imported, skipped });
+});
+
 module.exports = router;

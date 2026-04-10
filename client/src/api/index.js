@@ -48,6 +48,7 @@ export const api = {
   getSession: (id) => request('GET', `/attendance/sessions/${id}`),
   createSession: (data) => request('POST', '/attendance/sessions', data),
   markAttendance: (sid, att) => request('POST', `/attendance/sessions/${sid}/mark`, { attendance: att }),
+  bulkImportAttendance: (records) => request('POST', '/attendance/bulk-import', { records }),
 
   // Payments
   getPayments: (p = {}) => request('GET', '/payments?' + new URLSearchParams(p)),
@@ -58,6 +59,7 @@ export const api = {
   deletePayment: (id) => request('DELETE', `/payments/${id}`),
   sendReminder: (id) => request('POST', `/payments/${id}/remind`),
   bulkMonthlyFees: (data) => request('POST', '/payments/bulk/monthly', data),
+  bulkImportPayments: (payments) => request('POST', '/payments/bulk-import', { payments }),
 
   // Lesson Plans
   getLessonPlans: (p = {}) => request('GET', '/lesson-plans?' + new URLSearchParams(p)),

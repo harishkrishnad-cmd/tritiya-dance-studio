@@ -1,7 +1,30 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, CheckCircle, Bell, Trash2, Filter, Calendar, IndianRupee } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { Plus, CheckCircle, Bell, Trash2, Filter, Calendar, IndianRupee, FileSpreadsheet, Upload, Download, X, AlertCircle } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import Modal from '../components/Modal';
 import { api } from '../api';
+
+const PAY_COLS = [
+  { key: 'student_name', label: 'Student Name' },
+  { key: 'amount', label: 'Amount (₹)' },
+  { key: 'date', label: 'Date (YYYY-MM-DD)' },
+  { key: 'paid_date', label: 'Paid Date (YYYY-MM-DD)' },
+  { key: 'description', label: 'Description' },
+  { key: 'payment_method', label: 'Payment Method' },
+  { key: 'status', label: 'Status (paid/pending/overdue)' },
+];
+
+function downloadPayTemplate() {
+  const ws = XLSX.utils.aoa_to_sheet([
+    PAY_COLS.map(c => c.label),
+    ['Priya Sharma', '1500', '2026-04-01', '2026-04-05', 'Monthly fee - April 2026', 'Cash', 'paid'],
+    ['Ananya Rao', '1500', '2026-04-01', '', 'Monthly fee - April 2026', 'UPI', 'pending'],
+    ['Meera Reddy', '1500', '2026-03-01', '2026-04-02', 'Monthly fee - March 2026', 'UPI', 'paid'],
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Payments');
+  XLSX.writeFile(wb, 'payments_template.xlsx');
+}
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const METHODS = ['Cash','UPI','Bank Transfer','Cheque','Online'];
@@ -74,6 +97,13 @@ export default function Payments() {
   const [bulkResult,setBulkResult]=useState(null);
   const [bulkLoading,setBulkLoading]=useState(false);
   const [reminding,setReminding]=useState(null);
+  const [importOpen,setImportOpen]=useState(false);
+  const [importRows,setImportRows]=useState([]);
+  const [importErrors,setImportErrors]=useState([]);
+  const [importing,setImporting]=useState(false);
+  const [importResult,setImportResult]=useState(null);
+  const [dragOver,setDragOver]=useState(false);
+  const fileRef=useRef();
 
   const load = useCallback(async()=>{
     const p={}; if(filter.status) p.status=filter.status; if(filter.month) p.month=filter.month; if(filter.year) p.year=filter.year;
@@ -91,17 +121,128 @@ export default function Payments() {
     setBulkLoading(true); const r=await api.bulkMonthlyFees(bulkForm); setBulkResult(r); setBulkLoading(false); load();
   }
 
+  function parsePayFile(file) {
+    setImportResult(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const wb = XLSX.read(e.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const normalised = raw.map(r => {
+        const out = {};
+        for (const [k, v] of Object.entries(r)) {
+          const key = k.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+$/,'');
+          const col = PAY_COLS.find(c => c.label.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+$/,'') === key || c.key === key);
+          if (col) out[col.key] = String(v).trim();
+        }
+        return out;
+      }).filter(r => r.student_name && r.amount && r.date);
+      const errs = [];
+      normalised.forEach((r, i) => {
+        if (isNaN(parseFloat(r.amount)) || parseFloat(r.amount) <= 0) errs.push(`Row ${i+2}: Amount must be a positive number`);
+      });
+      setImportRows(normalised); setImportErrors(errs);
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  function handlePayFile(file) {
+    if (!file) return;
+    if (!file.name.match(/\.(xlsx|xls|csv)$/i)) { alert('Please upload an Excel or CSV file'); return; }
+    parsePayFile(file);
+  }
+
+  async function doImport() {
+    if (!importRows.length || importErrors.length) return;
+    setImporting(true);
+    try {
+      const r = await api.bulkImportPayments(importRows);
+      setImportResult({ success: true, count: r.imported, skipped: r.skipped });
+      setImportRows([]); load();
+    } catch (e) { setImportResult({ success: false, error: e.message }); }
+    setImporting(false);
+  }
+
   const currency='₹';
 
   return (
     <div className="space-y-4 max-w-5xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="text-xl font-semibold text-apple-text tracking-tight">Payments</h1><p className="text-xs text-apple-gray-5 mt-0.5">{payments.length} records</p></div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button onClick={()=>setBulkOpen(true)} className="btn-secondary flex items-center gap-1.5 text-sm"><Calendar size={14}/>Generate Monthly</button>
+          <button onClick={()=>{ setImportOpen(true); setImportRows([]); setImportErrors([]); setImportResult(null); }} className="btn-secondary flex items-center gap-1.5 text-sm"><FileSpreadsheet size={13}/>Import Excel</button>
           <button onClick={()=>setAddOpen(true)} className="btn-primary flex items-center gap-1.5"><Plus size={14}/>Add Payment</button>
         </div>
       </div>
+
+      {/* Excel Import Modal */}
+      <Modal isOpen={importOpen} onClose={()=>setImportOpen(false)} title="Import Payments from Excel" size="lg">
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <button onClick={downloadPayTemplate} className="btn-secondary flex items-center gap-1.5 text-xs"><Download size={12}/> Download Template</button>
+          </div>
+          {importResult && (
+            <div className={`flex items-start gap-3 p-3 rounded-apple-sm ${importResult.success ? 'bg-green-50 border-l-4 border-apple-green' : 'bg-red-50 border-l-4 border-apple-red'}`}>
+              {importResult.success
+                ? <><CheckCircle size={16} className="text-apple-green shrink-0 mt-0.5"/><div><p className="font-medium text-apple-text text-sm">{importResult.count} payment{importResult.count!==1?'s':''} imported</p>{importResult.skipped>0 && <p className="text-xs text-apple-gray-5">{importResult.skipped} skipped (student not found or invalid)</p>}</div></>
+                : <><AlertCircle size={16} className="text-apple-red shrink-0 mt-0.5"/><p className="text-sm text-apple-text">{importResult.error}</p></>}
+            </div>
+          )}
+          {!importRows.length ? (
+            <div
+              className={`border-2 border-dashed rounded-apple-sm text-center py-10 cursor-pointer transition-all ${dragOver?'border-apple-blue bg-blue-50':'border-apple-gray-2 hover:border-apple-blue/40'}`}
+              onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)}
+              onDrop={e=>{e.preventDefault();setDragOver(false);handlePayFile(e.dataTransfer.files[0]);}}
+              onClick={()=>fileRef.current?.click()}
+            >
+              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e=>handlePayFile(e.target.files[0])}/>
+              <FileSpreadsheet size={32} className="mx-auto text-apple-blue mb-2 opacity-70"/>
+              <p className="font-medium text-apple-text text-sm">Drop your Excel file here or click to browse</p>
+              <p className="text-xs text-apple-gray-4 mt-1">Columns: Student Name, Amount, Date, Paid Date, Description, Payment Method, Status</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-apple-text">{importRows.length} payment{importRows.length!==1?'s':''} ready to import</p>
+                <button onClick={()=>{setImportRows([]);setImportErrors([]);}} className="text-xs text-apple-gray-4 hover:text-apple-red flex items-center gap-1"><X size={12}/> Clear</button>
+              </div>
+              {importErrors.length>0 && (
+                <div className="bg-orange-50 border-l-4 border-apple-orange p-3 rounded-apple-sm space-y-1">
+                  <p className="text-xs font-medium text-apple-text">{importErrors.length} issue{importErrors.length!==1?'s':''} found</p>
+                  {importErrors.map((e,i)=><p key={i} className="text-xs text-apple-gray-5">• {e}</p>)}
+                </div>
+              )}
+              <div className="overflow-x-auto border border-apple-gray-2 rounded-apple-sm">
+                <table className="w-full text-xs">
+                  <thead><tr className="bg-apple-gray border-b border-apple-gray-2">
+                    {['Student','Amount','Date','Paid Date','Method','Status'].map(h=><th key={h} className="text-left px-3 py-2 text-apple-gray-5 font-semibold uppercase text-[10px] whitespace-nowrap">{h}</th>)}
+                  </tr></thead>
+                  <tbody className="divide-y divide-apple-gray-2/60">
+                    {importRows.slice(0,15).map((r,i)=>(
+                      <tr key={i} className="hover:bg-apple-gray/40">
+                        <td className="px-3 py-2 text-apple-text">{r.student_name}</td>
+                        <td className="px-3 py-2 text-apple-text font-medium">₹{r.amount}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.date}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.paid_date||'—'}</td>
+                        <td className="px-3 py-2 text-apple-text">{r.payment_method||'Cash'}</td>
+                        <td className="px-3 py-2">
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${(r.status||'paid')==='paid'?'bg-green-100 text-apple-green':(r.status||'')==='overdue'?'bg-red-100 text-apple-red':'bg-orange-100 text-apple-orange'}`}>{r.status||'paid'}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {importRows.length>15 && <p className="text-xs text-apple-gray-5 px-3 py-2 border-t border-apple-gray-2">… and {importRows.length-15} more</p>}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-apple-gray-2">
+          <button className="btn-secondary" onClick={()=>setImportOpen(false)}>Cancel</button>
+          {importRows.length>0 && <button className="btn-primary flex items-center gap-1.5" onClick={doImport} disabled={importing||importErrors.length>0}><Upload size={13}/>{importing?'Importing…':`Import ${importRows.length} Payments`}</button>}
+        </div>
+      </Modal>
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
