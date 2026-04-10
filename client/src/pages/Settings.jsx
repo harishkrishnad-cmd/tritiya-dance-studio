@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Mail, Send, School, Bell, CheckCircle, XCircle, MessageSquare, CreditCard } from 'lucide-react';
+import { Save, Mail, Send, School, Bell, CheckCircle, XCircle, MessageSquare, CreditCard, Image, Download, Upload, Sun, Moon } from 'lucide-react';
 import { api } from '../api';
 
 function Section({ title, icon: Icon, children }) {
@@ -29,6 +29,11 @@ export default function Settings({ onNameChange }) {
   const [waLogsLoaded,setWaLogsLoaded]=useState(false);
   const [upiUrlInput, setUpiUrlInput] = useState('');
   const upiFileRef = useRef();
+  const logoFileRef = useRef();
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const [restoreResult, setRestoreResult] = useState(null);
+  const restoreFileRef = useRef();
   const [smtpProvider, setSmtpProvider] = useState('');
   const [smtpHint, setSmtpHint] = useState('');
   const [etherealLoading, setEtherealLoading] = useState(false);
@@ -55,6 +60,43 @@ export default function Settings({ onNameChange }) {
     setEtherealLoading(false);
   }
   function set(key,val){ setS(v=>({...v,[key]:val})); setSaved(false); }
+
+  async function handleBackupDownload() {
+    setBackupLoading(true);
+    const token = localStorage.getItem('auth_token');
+    const res = await fetch('/api/backup', { headers: { Authorization: `Bearer ${token}` } });
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tritiya-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setBackupLoading(false);
+  }
+
+  function handleRestoreFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!window.confirm(`Restore from "${file.name}"? This will REPLACE all current data. Are you sure?`)) return;
+    setRestoreLoading(true); setRestoreResult(null);
+    const reader = new FileReader();
+    reader.onload = async ev => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        const res = await fetch('/api/backup/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: ev.target.result,
+        });
+        const data = await res.json();
+        setRestoreResult(data.success ? { ok: true, msg: 'Restore complete! Refresh the page.' } : { ok: false, msg: data.error });
+      } catch(err) { setRestoreResult({ ok: false, msg: err.message }); }
+      setRestoreLoading(false);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
 
   async function handleSave() {
     setSaving(true); await api.saveSettings(s); setSaving(false); setSaved(true);
@@ -264,6 +306,45 @@ export default function Settings({ onNameChange }) {
         </div>
       </Section>
 
+      <Section title="Studio Logo" icon={Image}>
+        <p className="text-xs text-apple-gray-4">Upload your studio logo — shown in the website header, emails, and student portal.</p>
+        {s.logo_image && (
+          <div className="flex items-start gap-3">
+            <img src={s.logo_image} alt="Studio Logo" className="h-16 object-contain border border-apple-gray-2 rounded-apple-sm bg-white p-2" />
+            <button onClick={() => set('logo_image', '')} className="text-xs text-apple-red hover:underline mt-1">Remove</button>
+          </div>
+        )}
+        <div>
+          <label className="label">Upload Logo</label>
+          <input type="file" accept="image/*" ref={logoFileRef} style={{display:'none'}} onChange={e => {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => set('logo_image', ev.target.result);
+            reader.readAsDataURL(file);
+          }} />
+          <button className="btn-secondary text-xs" onClick={() => logoFileRef.current.click()}>📁 Choose Logo Image</button>
+          <p className="text-xs text-apple-gray-5 mt-1">PNG or SVG with transparent background works best. Max ~500KB.</p>
+        </div>
+      </Section>
+
+      <Section title="Website Theme" icon={Sun}>
+        <p className="text-xs text-apple-gray-4">Choose the colour theme for your public landing page.</p>
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { id: 'dark', label: 'Dark', icon: '🌙', desc: 'Deep black — premium look (default)' },
+            { id: 'light', label: 'Light', icon: '☀️', desc: 'Clean white — bright and airy' },
+          ].map(t => (
+            <button key={t.id} onClick={() => set('site_theme', t.id)}
+              className={`p-4 rounded-apple-sm border text-left transition-all ${(s.site_theme || 'dark') === t.id ? 'border-apple-blue bg-blue-50' : 'border-apple-gray-2 bg-white hover:border-apple-blue/40'}`}>
+              <p className="text-xl mb-1">{t.icon}</p>
+              <p className="text-sm font-semibold text-apple-text">{t.label}</p>
+              <p className="text-xs text-apple-gray-5 mt-0.5">{t.desc}</p>
+              {t.id === 'dark' && <span className="text-xs text-apple-blue font-medium">Default</span>}
+            </button>
+          ))}
+        </div>
+      </Section>
+
       <Section title="Payment UPI QR Code" icon={CreditCard}>
         <p className="text-xs text-apple-gray-4">Upload your UPI QR code — it will appear in welcome emails and payment reminders.</p>
         {s.upi_qr_image && (
@@ -365,6 +446,32 @@ export default function Settings({ onNameChange }) {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+      </Section>
+
+      <Section title="Backup & Restore" icon={Download}>
+        <p className="text-xs text-apple-gray-4">
+          Download a full backup of all your data (students, payments, settings, website content) as a JSON file.
+          Restore it any time — useful before deploying updates or if data is accidentally lost.
+        </p>
+        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-apple-sm">
+          <p className="text-xs text-yellow-800 font-medium">⚠️ Download a backup before every major update or deploy.</p>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button onClick={handleBackupDownload} disabled={backupLoading} className="btn-primary flex items-center gap-1.5">
+            <Download size={13}/>{backupLoading ? 'Preparing…' : 'Download Backup (.json)'}
+          </button>
+          <button onClick={() => restoreFileRef.current.click()} disabled={restoreLoading} className="btn-secondary flex items-center gap-1.5">
+            <Upload size={13}/>{restoreLoading ? 'Restoring…' : 'Restore from Backup'}
+          </button>
+          <input type="file" accept=".json" ref={restoreFileRef} style={{display:'none'}} onChange={handleRestoreFile} />
+        </div>
+        {restoreResult && (
+          <div className={`flex items-center gap-2 text-sm ${restoreResult.ok ? 'text-apple-green' : 'text-apple-red'}`}>
+            {restoreResult.ok ? <CheckCircle size={14}/> : <XCircle size={14}/>}
+            {restoreResult.msg}
+            {restoreResult.ok && <button onClick={() => window.location.reload()} className="underline text-apple-blue ml-1">Refresh now</button>}
           </div>
         )}
       </Section>

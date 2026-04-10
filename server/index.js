@@ -37,6 +37,9 @@ app.use('/api/otp',         require('./routes/otp'));
 // LMS (courses, quizzes, progress)
 app.use('/api/lms',         authMiddleware, require('./routes/lms'));
 
+// Backup / restore
+app.use('/api/backup',      require('./routes/backup'));
+
 // Serve React build
 const clientBuild = path.join(__dirname, '../client/dist');
 app.use(express.static(clientBuild));

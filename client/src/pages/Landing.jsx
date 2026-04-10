@@ -62,6 +62,26 @@ export default function Landing() {
   const [gallery, setGallery] = useState([]);
   const [testimonials, setTestimonials] = useState([]);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
+  const [logo, setLogo] = useState('');
+  const [theme, setTheme] = useState('dark');
+
+  const isDark = theme === 'dark';
+  const T = {
+    bg: isDark ? '#0a0a0a' : '#ffffff',
+    text: isDark ? '#f5f5f7' : '#1d1d1f',
+    textMuted: isDark ? 'rgba(245,245,247,0.6)' : '#6e6e73',
+    navBg: isDark ? 'rgba(10,10,10,0.85)' : 'rgba(255,255,255,0.85)',
+    navBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    navLink: isDark ? 'rgba(245,245,247,0.75)' : 'rgba(29,29,31,0.7)',
+    navLinkHover: isDark ? '#f5f5f7' : '#1d1d1f',
+    navBtnBg: isDark ? '#f5f5f7' : '#1d1d1f',
+    navBtnText: isDark ? '#0a0a0a' : '#f5f5f7',
+    sectionAlt: isDark ? '#111' : '#f5f5f7',
+    card: isDark ? '#1a1a1a' : '#ffffff',
+    cardBorder: isDark ? 'rgba(255,255,255,0.06)' : '#e8e8ed',
+    menuBg: isDark ? '#0a0a0a' : '#ffffff',
+    menuBorder: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+  };
 
   useEffect(() => {
     fetch('/api/website/public')
@@ -69,6 +89,8 @@ export default function Landing() {
       .then(res => {
         setData(res.settings || {});
         setGallery(res.gallery && res.gallery.length > 0 ? res.gallery : DEFAULT_GALLERY);
+        if (res.settings?.logo_image) setLogo(res.settings.logo_image);
+        if (res.settings?.site_theme) setTheme(res.settings.site_theme);
       })
       .catch(() => setGallery(DEFAULT_GALLERY));
     fetch('/api/website/testimonials').then(r => r.json()).then(setTestimonials).catch(() => {});
@@ -106,57 +128,63 @@ export default function Landing() {
   }));
 
   return (
-    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif", background: '#0a0a0a', color: '#f5f5f7', minHeight: '100vh' }}>
+    <div style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif", background: T.bg, color: T.text, minHeight: '100vh', transition: 'background 0.3s, color 0.3s' }}>
 
       {/* ── NAV ── */}
       <nav style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-        background: scrolled ? 'rgba(10,10,10,0.85)' : 'transparent',
+        background: scrolled ? T.navBg : 'transparent',
         backdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
         WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(180%)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(255,255,255,0.08)' : 'none',
+        borderBottom: scrolled ? `1px solid ${T.navBorder}` : 'none',
         transition: 'all 0.4s ease',
         padding: '0 max(24px, calc((100vw - 1100px)/2))',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60 }}>
           <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
             style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, padding: 0 }}>
-            <span style={{ fontSize: 22 }}>🪷</span>
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#f5f5f7', letterSpacing: '-0.3px' }}>Tritiya Dance Studio</span>
+            {logo ? (
+              <img src={logo} alt="Studio Logo" style={{ height: 34, width: 'auto', objectFit: 'contain' }} />
+            ) : (
+              <>
+                <span style={{ fontSize: 22 }}>🪷</span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: T.text, letterSpacing: '-0.3px' }}>{s('school_name', data) || 'Tritiya Dance Studio'}</span>
+              </>
+            )}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', gap: 32 }} className="desktop-nav">
             {['about','gallery','programs','contact'].map(id => (
               <button key={id} onClick={() => scrollTo(id)}
-                style={{ background: 'none', border: 'none', color: 'rgba(245,245,247,0.75)', fontSize: 13, cursor: 'pointer', padding: 0, textTransform: 'capitalize', transition: 'color 0.2s' }}
-                onMouseEnter={e => e.target.style.color='#f5f5f7'} onMouseLeave={e => e.target.style.color='rgba(245,245,247,0.75)'}>
+                style={{ background: 'none', border: 'none', color: T.navLink, fontSize: 13, cursor: 'pointer', padding: 0, textTransform: 'capitalize', transition: 'color 0.2s' }}
+                onMouseEnter={e => e.target.style.color=T.navLinkHover} onMouseLeave={e => e.target.style.color=T.navLink}>
                 {id.charAt(0).toUpperCase()+id.slice(1)}
               </button>
             ))}
-            <a href="/parent" style={{ fontSize: 13, color: 'rgba(245,245,247,0.75)', textDecoration: 'none' }}
-              onMouseEnter={e => e.target.style.color='#f5f5f7'} onMouseLeave={e => e.target.style.color='rgba(245,245,247,0.75)'}>
+            <a href="/parent" style={{ fontSize: 13, color: T.navLink, textDecoration: 'none' }}
+              onMouseEnter={e => e.target.style.color=T.navLinkHover} onMouseLeave={e => e.target.style.color=T.navLink}>
               Parent Portal
             </a>
-            <a href="/student" style={{ fontSize: 13, fontWeight: 500, color: '#0a0a0a', background: '#f5f5f7', padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'opacity 0.2s' }}
+            <a href="/student" style={{ fontSize: 13, fontWeight: 500, color: T.navBtnText, background: T.navBtnBg, padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'opacity 0.2s' }}
               onMouseEnter={e => e.target.style.opacity='0.85'} onMouseLeave={e => e.target.style.opacity='1'}>
               Student Portal
             </a>
           </div>
           <button onClick={() => setMenuOpen(v => !v)} className="mobile-menu-btn"
-            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#f5f5f7' }}>
+            style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: T.text }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               {menuOpen ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></> : <><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></>}
             </svg>
           </button>
         </div>
         {menuOpen && (
-          <div style={{ padding: '16px 0 24px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div style={{ padding: '16px 0 24px', background: T.menuBg, borderTop: `1px solid ${T.menuBorder}`, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {['about','gallery','programs','contact'].map(id => (
               <button key={id} onClick={() => scrollTo(id)}
-                style={{ background: 'none', border: 'none', color: 'rgba(245,245,247,0.8)', fontSize: 17, cursor: 'pointer', padding: '10px 0', textAlign: 'left', textTransform: 'capitalize' }}>
+                style={{ background: 'none', border: 'none', color: T.text, fontSize: 17, cursor: 'pointer', padding: '10px 0', textAlign: 'left', textTransform: 'capitalize' }}>
                 {id.charAt(0).toUpperCase()+id.slice(1)}
               </button>
             ))}
-            <a href="/parent" style={{ color: 'rgba(245,245,247,0.8)', fontSize: 17, textDecoration: 'none', padding: '10px 0' }}>Parent Portal</a>
+            <a href="/parent" style={{ color: T.text, fontSize: 17, textDecoration: 'none', padding: '10px 0' }}>Parent Portal</a>
             <a href="/student" style={{ color: '#0a0a0a', background: '#f5f5f7', fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 8, display: 'inline-block', width: 'fit-content' }}>Student Portal</a>
           </div>
         )}

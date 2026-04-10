@@ -1,7 +1,9 @@
 const Database = require('better-sqlite3');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'school.db');
+// On Render.com, use the persistent disk at /data to survive deploys
+// Locally, use the server directory
+const DB_PATH = process.env.RENDER ? '/data/school.db' : path.join(__dirname, 'school.db');
 const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
@@ -300,6 +302,8 @@ const defaults = [
   ['email_api_key', ''],        // Brevo or Resend API key
   ['email_from_name', 'Tritiya Dance Studio'],
   ['email_from_address', ''],
+  ['logo_image', ''],           // base64 or URL
+  ['site_theme', 'dark'],       // 'dark' | 'light'
 ];
 defaults.forEach(([k, v]) => upsert.run(k, v));
 
