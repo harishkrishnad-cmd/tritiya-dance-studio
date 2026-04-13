@@ -90,17 +90,21 @@ app.get('*', (req, res, next) => {
     const title = escAttr((ws.hero_title || ms.school_name || 'Tritiya Dance Studio').replace(/\n/g, ' '));
     const desc  = escAttr(ws.hero_subtitle || ws.hero_tagline || ms.school_description || 'Classical Bharatanatyam & Kuchipudi training — Nagaram, Hyderabad');
 
-    // Prefer a real URL image; skip base64 (too large / not a valid og:image)
-    let img = '';
+    // Use the /api/website/og-image endpoint which handles both URL and base64 images
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    let img = `${baseUrl}/api/website/og-image`;
+
+    // Also check if there's a plain URL we can use directly (better for caches that don't follow redirects)
     for (const key of ['hero_image', 'og_image', 'about_photo', 'quote_image']) {
       const v = ws[key] || '';
       if (v && !v.startsWith('data:')) { img = v; break; }
     }
-    if (!img) {
+    if (img === `${baseUrl}/api/website/og-image`) {
+      // No plain URL found — check gallery for a plain URL
       const row = db.prepare("SELECT src FROM website_gallery WHERE src NOT LIKE 'data:%' ORDER BY sort_order ASC, id ASC LIMIT 1").get();
       if (row) img = row.src;
+      // else keep pointing to our og-image endpoint which will decode the base64 image
     }
-    if (!img) img = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Bharatanatyam_poses.jpg/1200px-Bharatanatyam_poses.jpg';
 
     res.send(`<!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8"/>

@@ -15,7 +15,7 @@ const DEFAULTS = {
   hero_title: 'Tritiya\nDance Studio',
   hero_subtitle: 'Bharatanatyam · Nagaram, Hyderabad',
   hero_tagline: 'Classical Indian Dance',
-  hero_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Bharatanatyam_poses.jpg/1200px-Bharatanatyam_poses.jpg',
+  hero_image: '',
   hero_cta1: 'Explore Programs',
   hero_cta2: 'Get in Touch',
   about_heading: 'Where ancient art\nfinds new voice.',
@@ -23,7 +23,7 @@ const DEFAULTS = {
   about_text2: 'From young beginners discovering their first steps to advanced students preparing for arangetram, every student receives personalised, rigorous training that honours tradition while nurturing expression.',
   about_badge_name: 'Revathi Krishna',
   about_badge_title: 'Founder & Principal Instructor',
-  about_photo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/Bharatanatyam_by_Amrita_Lahiri_%28104%29.jpg/800px-Bharatanatyam_by_Amrita_Lahiri_%28104%29.jpg',
+  about_photo: '',
   stat1_title: 'Bharatanatyam', stat1_sub: 'Primary discipline',
   stat2_title: 'Kuchipudi', stat2_sub: 'Secondary discipline',
   stat3_title: 'All ages', stat3_sub: 'Beginners welcome',
@@ -37,7 +37,7 @@ const DEFAULTS = {
   contact_hours: 'Mon – Sat · 09:30 AM onwards',
   quote_text: '"Dance is the hidden language of the soul."',
   quote_author: '— Martha Graham',
-  quote_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/f0/A_Vibrant_Bharatanatyam_Group_Interpretation.jpg/1400px-A_Vibrant_Bharatanatyam_Group_Interpretation.jpg',
+  quote_image: '',
   program1_icon: '🌱', program1_level: 'Beginner', program1_title: 'Foundations',
   program1_desc: 'Introduction to Bharatanatyam — Adavus, basic footwork, posture, and the fundamentals of Nritta. Perfect for ages 5 and above.',
   program2_icon: '🌿', program2_level: 'Intermediate', program2_title: 'Classical Training',
@@ -128,6 +128,7 @@ export default function Landing() {
       .then(r => r.json())
       .then(res => {
         const settings = res.settings || {};
+        // Only fall back to DEFAULT_GALLERY (Wikimedia) if the studio has truly not uploaded any images
         const gal = res.gallery && res.gallery.length > 0 ? res.gallery : DEFAULT_GALLERY;
         setData(settings);
         setGallery(gal);

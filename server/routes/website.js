@@ -3,6 +3,44 @@ const router = express.Router();
 const db = require('../database');
 const { authMiddleware, adminOnly } = require('../middleware/auth');
 
+// ── Public: og:image endpoint — serves the hero/about image as binary ──
+// WhatsApp / social crawlers need a real HTTP image URL, not a base64 data-URI.
+// This endpoint reads the best available image from the DB and proxies it.
+router.get('/og-image', (req, res) => {
+  try {
+    const ws = db.prepare('SELECT key,value FROM website_settings').all()
+      .reduce((a, r) => { a[r.key] = r.value; return a; }, {});
+
+    let dataUrl = '';
+    for (const key of ['hero_image', 'og_image', 'about_photo', 'quote_image']) {
+      const v = ws[key] || '';
+      if (v) { dataUrl = v; break; }
+    }
+    if (!dataUrl) {
+      const row = db.prepare('SELECT src FROM website_gallery ORDER BY sort_order ASC, id ASC LIMIT 1').get();
+      if (row) dataUrl = row.src;
+    }
+
+    if (!dataUrl) return res.status(404).send('No image');
+
+    // If it's a plain URL, redirect to it
+    if (!dataUrl.startsWith('data:')) return res.redirect(dataUrl);
+
+    // It's a base64 data-URI — decode and serve as binary
+    const [header, b64] = dataUrl.split(',');
+    const mimeMatch = header.match(/data:([^;]+)/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const buffer = Buffer.from(b64, 'base64');
+
+    res.setHeader('Content-Type', mime);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (err) {
+    res.status(500).send('Error');
+  }
+});
+
 // ── Public: landing page fetches this (no auth) ──────────────
 router.get('/public', (req, res) => {
   try {
