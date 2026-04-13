@@ -61,11 +61,18 @@ function nl(text) {
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [data, setData] = useState(null);
-  const [gallery, setGallery] = useState([]);
+  // Initialise from localStorage cache — eliminates flash of default/wrong images on load
+  const [data, setData] = useState(() => {
+    try { const c = localStorage.getItem('tritiya_ws'); return c ? JSON.parse(c) : null; } catch { return null; }
+  });
+  const [gallery, setGallery] = useState(() => {
+    try { const c = localStorage.getItem('tritiya_wg'); return c ? JSON.parse(c) : []; } catch { return []; }
+  });
   const [testimonials, setTestimonials] = useState([]);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
-  const [logo, setLogo] = useState('');
+  const [logo, setLogo] = useState(() => {
+    try { const c = localStorage.getItem('tritiya_ws'); return c ? (JSON.parse(c).logo_image || '') : ''; } catch { return ''; }
+  });
   const [theme, setTheme] = useState(() => localStorage.getItem('tritiya_theme') || 'dark');
 
   function toggleTheme() {
@@ -120,12 +127,24 @@ export default function Landing() {
     fetch('/api/website/public')
       .then(r => r.json())
       .then(res => {
-        setData(res.settings || {});
-        setGallery(res.gallery && res.gallery.length > 0 ? res.gallery : DEFAULT_GALLERY);
-        if (res.settings?.logo_image) setLogo(res.settings.logo_image);
-        if (!localStorage.getItem('tritiya_theme') && res.settings?.site_theme) setTheme(res.settings.site_theme);
+        const settings = res.settings || {};
+        const gal = res.gallery && res.gallery.length > 0 ? res.gallery : DEFAULT_GALLERY;
+        setData(settings);
+        setGallery(gal);
+        if (settings.logo_image) setLogo(settings.logo_image);
+        if (!localStorage.getItem('tritiya_theme') && settings.site_theme) setTheme(settings.site_theme);
+
+        // Cache slim version for instant render on next visit (skip base64 to avoid quota overflow)
+        try {
+          const slimSettings = Object.fromEntries(
+            Object.entries(settings).filter(([, v]) => !String(v).startsWith('data:'))
+          );
+          localStorage.setItem('tritiya_ws', JSON.stringify(slimSettings));
+          const slimGallery = gal.filter(g => !String(g.src).startsWith('data:'));
+          if (slimGallery.length > 0) localStorage.setItem('tritiya_wg', JSON.stringify(slimGallery));
+        } catch {}
       })
-      .catch(() => setGallery(DEFAULT_GALLERY));
+      .catch(() => { if (!data) setGallery(DEFAULT_GALLERY); });
     fetch('/api/website/testimonials').then(r => r.json()).then(setTestimonials).catch(() => {});
   }, []);
 

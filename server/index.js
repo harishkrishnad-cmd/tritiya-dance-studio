@@ -68,6 +68,58 @@ app.use('/api/backup',      require('./routes/backup'));
 // Serve React build
 const clientBuild = path.join(__dirname, '../client/dist');
 app.use(express.static(clientBuild));
+
+// ── Social/bot crawler middleware — inject real og:image from DB ──
+// WhatsApp, Facebook, Telegram etc. send a bot UA and read the HTML <head>.
+// Since the React app is client-rendered, they only see index.html which has
+// a hardcoded og:image. This middleware intercepts bot requests and returns
+// a lightweight HTML page with the correct og:image from the database.
+const BOT_UA = /WhatsApp|facebookexternalhit|Twitterbot|LinkedInBot|TelegramBot|Slackbot|Discordbot|Googlebot|bingbot|Applebot/i;
+const db = require('./database');
+
+function escAttr(str) { return String(str || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+app.get('*', (req, res, next) => {
+  if (!BOT_UA.test(req.headers['user-agent'] || '')) return next();
+  try {
+    const ws = db.prepare('SELECT key,value FROM website_settings').all()
+      .reduce((a, r) => { a[r.key] = r.value; return a; }, {});
+    const ms = db.prepare("SELECT key,value FROM settings WHERE key IN ('school_name','school_description')").all()
+      .reduce((a, r) => { a[r.key] = r.value; return a; }, {});
+
+    const title = escAttr((ws.hero_title || ms.school_name || 'Tritiya Dance Studio').replace(/\n/g, ' '));
+    const desc  = escAttr(ws.hero_subtitle || ws.hero_tagline || ms.school_description || 'Classical Bharatanatyam & Kuchipudi training — Nagaram, Hyderabad');
+
+    // Prefer a real URL image; skip base64 (too large / not a valid og:image)
+    let img = '';
+    for (const key of ['hero_image', 'og_image', 'about_photo', 'quote_image']) {
+      const v = ws[key] || '';
+      if (v && !v.startsWith('data:')) { img = v; break; }
+    }
+    if (!img) {
+      const row = db.prepare("SELECT src FROM website_gallery WHERE src NOT LIKE 'data:%' ORDER BY sort_order ASC, id ASC LIMIT 1").get();
+      if (row) img = row.src;
+    }
+    if (!img) img = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/39/Bharatanatyam_poses.jpg/1200px-Bharatanatyam_poses.jpg';
+
+    res.send(`<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"/>
+<title>${title}</title>
+<meta name="description" content="${desc}"/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="${title}"/>
+<meta property="og:description" content="${desc}"/>
+<meta property="og:image" content="${escAttr(img)}"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="${title}"/>
+<meta name="twitter:description" content="${desc}"/>
+<meta name="twitter:image" content="${escAttr(img)}"/>
+</head><body></body></html>`);
+  } catch { next(); }
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(clientBuild, 'index.html'));
 });
