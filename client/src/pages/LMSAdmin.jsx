@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, BookOpen, Video, FileText, Link2, Edit2, ChevronRight, CheckCircle, X, GripVertical } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Save, BookOpen, Video, FileText, Link2, Edit2, ChevronRight, CheckCircle, X, GripVertical, Upload, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { api } from '../api';
 
 const token = () => localStorage.getItem('auth_token');
@@ -53,6 +54,7 @@ export default function LMSAdmin() {
   const [courseForm, setCourseForm] = useState({ title: '', description: '', level: 'All' });
   const [matForm, setMatForm] = useState({ title: '', type: 'video', content: '', duration_minutes: '' });
   const [quizForm, setQuizForm] = useState({ title: '', pass_score: 70, questions: [{ question: '', options: ['', '', '', ''], correct_index: 0 }] });
+  const excelInputRef = useRef(null);
 
   useEffect(() => { loadCourses(); }, []);
 
@@ -130,6 +132,58 @@ export default function LMSAdmin() {
       setQuizForm({ title: selected.title + ' Quiz', pass_score: 70, questions: [{ question: '', options: ['','','',''], correct_index: 0 }] });
     }
     setShowQuiz(true);
+  }
+
+  // ── Excel helpers ────────────────────────────────────────────
+  function downloadExcelTemplate() {
+    const header = [['Question', 'Option A', 'Option B', 'Option C', 'Option D', 'Correct Answer (A/B/C/D)']];
+    const sample = [
+      ['What is Bharatanatyam?', 'A classical dance form', 'A martial art', 'A type of music', 'A painting style', 'A'],
+      ['Which state does Kuchipudi originate from?', 'Tamil Nadu', 'Andhra Pradesh', 'Kerala', 'Karnataka', 'B'],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([...header, ...sample]);
+    // Column widths
+    ws['!cols'] = [{ wch: 40 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 25 }, { wch: 20 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Quiz Questions');
+    XLSX.writeFile(wb, 'quiz_questions_template.xlsx');
+  }
+
+  function handleExcelUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        // Skip header row (row 0)
+        const parsed = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row || !row[0]) continue; // skip empty rows
+          const question = String(row[0] || '').trim();
+          const optA = String(row[1] || '').trim();
+          const optB = String(row[2] || '').trim();
+          const optC = String(row[3] || '').trim();
+          const optD = String(row[4] || '').trim();
+          const correctLetter = String(row[5] || 'A').trim().toUpperCase();
+          const correctMap = { A: 0, B: 1, C: 2, D: 3 };
+          const correct_index = correctMap[correctLetter] ?? 0;
+          if (question && optA && optB && optC && optD) {
+            parsed.push({ question, options: [optA, optB, optC, optD], correct_index });
+          }
+        }
+        if (parsed.length === 0) { alert('No valid questions found. Check the format and try again.'); return; }
+        setQuizForm(f => ({ ...f, questions: parsed }));
+        alert(`✅ ${parsed.length} question${parsed.length > 1 ? 's' : ''} imported successfully!`);
+      } catch (err) {
+        alert('Could not parse the Excel file. Please use the provided template.');
+      }
+      e.target.value = ''; // reset so same file can be re-uploaded
+    };
+    reader.readAsBinaryString(file);
   }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-apple-gray-4">Loading courses…</div>;
@@ -310,9 +364,26 @@ export default function LMSAdmin() {
           <Field label="Quiz Title"><input style={inp} value={quizForm.title} onChange={e=>setQuizForm(f=>({...f,title:e.target.value}))} /></Field>
           <Field label="Pass Score (%)"><input style={inp} type="number" min="1" max="100" value={quizForm.pass_score} onChange={e=>setQuizForm(f=>({...f,pass_score:parseInt(e.target.value)||70}))} /></Field>
           <div style={{ marginTop: 16 }}>
+            {/* Excel bulk upload section */}
+            <div style={{ background: '#f0f6ff', border: '1.5px dashed #0071e3', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: '#0071e3', marginBottom: 6 }}>📊 Bulk Upload via Excel</p>
+              <p style={{ fontSize: 11, color: '#555', marginBottom: 10, lineHeight: 1.5 }}>
+                Download the template, fill in your questions, then upload. Columns: <strong>Question · Option A · Option B · Option C · Option D · Correct Answer (A/B/C/D)</strong>
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={downloadExcelTemplate} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: '#fff', border: '1px solid #0071e3', borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#0071e3', cursor: 'pointer' }}>
+                  <Download size={12} /> Download Template
+                </button>
+                <button onClick={() => excelInputRef.current?.click()} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', background: '#0071e3', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 500, color: '#fff', cursor: 'pointer' }}>
+                  <Upload size={12} /> Upload Excel
+                </button>
+                <input ref={excelInputRef} type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} style={{ display: 'none' }} />
+              </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <p style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Questions</p>
-              <button onClick={addQuestion} className="btn-secondary flex items-center gap-1" style={{ fontSize: 11, padding: '5px 10px' }}><Plus size={11} /> Add</button>
+              <p style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Questions ({quizForm.questions.length})</p>
+              <button onClick={addQuestion} className="btn-secondary flex items-center gap-1" style={{ fontSize: 11, padding: '5px 10px' }}><Plus size={11} /> Add Question</button>
             </div>
             {quizForm.questions.map((q, qi) => (
               <div key={qi} style={{ background: '#f9f9f9', borderRadius: 10, padding: 14, marginBottom: 12 }}>

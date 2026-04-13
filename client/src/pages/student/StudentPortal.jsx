@@ -235,7 +235,11 @@ function CoursePage({ course, studentId, studentToken, stats, onBack, onStatsCha
 
   function handleQuizResult(result) {
     setQuizResult(result); setShowQuiz(false); onStatsChange();
-    if (result.passed) { setCertAttempt(result); }
+    if (result.passed) {
+      setCertAttempt(result);
+      // Auto-show certificate after a short celebration delay
+      setTimeout(() => setShowCert(true), 2000);
+    }
   }
 
   function getVideoEmbed(url) {
@@ -271,10 +275,11 @@ function CoursePage({ course, studentId, studentToken, stats, onBack, onStatsCha
         {quizResult && (
           <div style={{ background: quizResult.passed ? '#f0fff4' : '#fff2f0', border: `1px solid ${quizResult.passed ? '#34c759' : '#ff3b30'}`, borderRadius: 14, padding: '16px 20px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p style={{ fontSize: 16, fontWeight: 700, color: quizResult.passed ? '#1a7f37' : '#cf1322' }}>{quizResult.passed ? '🎉 You Passed!' : '😔 Not passed'}</p>
+              <p style={{ fontSize: 16, fontWeight: 700, color: quizResult.passed ? '#1a7f37' : '#cf1322' }}>{quizResult.passed ? '🎉 Congratulations! You Passed!' : '😔 Not passed'}</p>
               <p style={{ fontSize: 13, color: '#6e6e73', marginTop: 2 }}>Score: {quizResult.score}% · {quizResult.correct}/{quizResult.total} correct</p>
+              {quizResult.passed && <p style={{ fontSize: 12, color: '#34c759', marginTop: 4 }}>✨ Opening your certificate…</p>}
             </div>
-            {quizResult.passed && <button onClick={() => setShowCert(true)} style={{ padding: '8px 16px', background: '#34c759', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🏆 Certificate</button>}
+            {quizResult.passed && <button onClick={() => setShowCert(true)} style={{ padding: '8px 16px', background: '#34c759', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>🏆 View Certificate</button>}
           </div>
         )}
 
