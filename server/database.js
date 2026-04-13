@@ -282,6 +282,7 @@ if (!cols.includes('account_active')) db.exec("ALTER TABLE students ADD COLUMN a
 const payCols = db.prepare("PRAGMA table_info(payments)").all().map(c => c.name);
 if (!payCols.includes('razorpay_payment_id')) db.exec("ALTER TABLE payments ADD COLUMN razorpay_payment_id TEXT");
 if (!payCols.includes('razorpay_order_id')) db.exec("ALTER TABLE payments ADD COLUMN razorpay_order_id TEXT");
+if (!payCols.includes('razorpay_subscription_id')) db.exec("ALTER TABLE payments ADD COLUMN razorpay_subscription_id TEXT");
 
 const upsert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
 const defaults = [

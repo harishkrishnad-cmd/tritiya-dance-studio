@@ -91,4 +91,92 @@ router.post('/verify', async (req, res) => {
   }
 });
 
+// POST /api/razorpay/create-subscription
+// Creates (or reuses) a monthly plan and returns a subscription_id for checkout
+router.post('/create-subscription', async (req, res) => {
+  try {
+    const rzp = makeRazorpay();
+    if (!rzp) return res.status(400).json({ error: 'Razorpay not configured. Set keys in Settings.' });
+
+    const s = getSettings();
+    const feeAmount = Math.round(parseFloat(s.fee_amount || '1000') * 100); // paise
+
+    // Reuse cached plan if amount hasn't changed, otherwise create a new one
+    let planId = s.razorpay_plan_id;
+    const cachedAmt = parseInt(s.razorpay_plan_amount || '0');
+    if (!planId || cachedAmt !== feeAmount) {
+      const plan = await rzp.instance.plans.create({
+        period: 'monthly',
+        interval: 1,
+        item: {
+          name: 'Monthly Dance Fee',
+          amount: feeAmount,
+          currency: 'INR',
+          description: s.school_name || 'Dance Studio Monthly Fee',
+        },
+      });
+      planId = plan.id;
+      const upsert = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
+      upsert.run('razorpay_plan_id', planId);
+      upsert.run('razorpay_plan_amount', String(feeAmount));
+    }
+
+    const subscription = await rzp.instance.subscriptions.create({
+      plan_id: planId,
+      customer_notify: 1,
+      total_count: 120, // 10 years max — cancel anytime
+      notes: req.body.notes || {},
+    });
+
+    res.json({ subscription_id: subscription.id, key_id: rzp.key_id });
+  } catch (err) {
+    res.status(500).json({ error: err.error?.description || err.message || 'Failed to create subscription' });
+  }
+});
+
+// POST /api/razorpay/verify-subscription
+// Verifies the subscription authorization and records the first payment
+router.post('/verify-subscription', async (req, res) => {
+  const { razorpay_subscription_id, razorpay_payment_id, razorpay_signature, description, student_id, amount } = req.body;
+
+  if (!razorpay_subscription_id || !razorpay_payment_id || !razorpay_signature) {
+    return res.status(400).json({ error: 'Missing subscription payment details' });
+  }
+
+  const s = getSettings();
+  if (!s.razorpay_key_secret) return res.status(400).json({ error: 'Razorpay not configured' });
+
+  // Verify: HMAC-SHA256(payment_id + "|" + subscription_id, key_secret)
+  const expected = crypto
+    .createHmac('sha256', s.razorpay_key_secret)
+    .update(`${razorpay_payment_id}|${razorpay_subscription_id}`)
+    .digest('hex');
+
+  if (expected !== razorpay_signature) {
+    return res.status(400).json({ error: 'Subscription verification failed — signature mismatch.' });
+  }
+
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const amountInRupees = amount ? Number(amount) / 100 : parseFloat(s.fee_amount || '1000');
+    const r = db.prepare(`
+      INSERT INTO payments
+        (student_id, amount, due_date, paid_date, payment_method, description, status, razorpay_payment_id, razorpay_subscription_id)
+      VALUES (?, ?, ?, ?, 'razorpay_autopay', ?, 'paid', ?, ?)
+    `).run(
+      student_id || null,
+      amountInRupees,
+      today,
+      today,
+      description || 'Auto-Pay Subscription via Razorpay',
+      razorpay_payment_id,
+      razorpay_subscription_id
+    );
+
+    res.json({ success: true, payment_db_id: r.lastInsertRowid, razorpay_payment_id, razorpay_subscription_id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

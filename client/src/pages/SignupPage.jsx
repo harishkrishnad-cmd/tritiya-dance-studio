@@ -17,6 +17,8 @@ export default function SignupPage() {
   const [paid, setPaid] = useState(false);
   const [rzpPaying, setRzpPaying] = useState(false);
   const [rzpDone, setRzpDone] = useState(false);
+  const [rzpSubPaying, setRzpSubPaying] = useState(false);
+  const [rzpSubDone, setRzpSubDone] = useState(false);
   const [form, setForm] = useState({
     student_name: '', date_of_birth: '', level: 'Beginner',
     parent_name: '', parent_email: '', parent_phone: '', address: '', notes: '',
@@ -80,6 +82,47 @@ export default function SignupPage() {
     } catch (err) {
       setError('Payment error: ' + err.message);
       setRzpPaying(false);
+    }
+  }
+
+  async function handleRazorpaySubscribe() {
+    setRzpSubPaying(true); setError('');
+    try {
+      const subRes = await fetch('/api/razorpay/create-subscription', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: { student: form.student_name } }),
+      });
+      const sub = await subRes.json();
+      if (!subRes.ok) { setError(sub.error || 'Could not set up subscription'); setRzpSubPaying(false); return; }
+
+      const rzp = new window.Razorpay({
+        key: sub.key_id,
+        subscription_id: sub.subscription_id,
+        name: info.school_name,
+        description: 'Monthly Dance Fee — Auto-Pay',
+        prefill: { name: form.parent_name, email: form.parent_email, contact: form.parent_phone },
+        theme: { color: '#5856d6' },
+        handler: async (response) => {
+          const verRes = await fetch('/api/razorpay/verify-subscription', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              description: `Auto-Pay — ${form.student_name}`,
+            }),
+          });
+          const ver = await verRes.json();
+          if (ver.success) { setRzpSubDone(true); setPaid(true); }
+          else setError(ver.error || 'Subscription verification failed');
+          setRzpSubPaying(false);
+        },
+        modal: { ondismiss: () => setRzpSubPaying(false) },
+      });
+      rzp.open();
+    } catch (err) {
+      setError('Subscription error: ' + err.message);
+      setRzpSubPaying(false);
     }
   }
 
@@ -226,107 +269,63 @@ export default function SignupPage() {
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{form.parent_email}</span>
                 </div>
               </div>
-              {/* Payment Options */}
+              {/* Payment Options — Razorpay only */}
               <p style={{ fontSize: 12, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Choose a payment method</p>
 
-              {/* Razorpay — Pay Online */}
-              {info.razorpay_key_id && (
-                <div style={{ border: rzpDone ? '2px solid #34c759' : '2px solid #0071e3', borderRadius: 14, padding: 16, marginBottom: 12, background: rzpDone ? '#f0fff4' : '#f0f6ff' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: rzpDone ? '#d1f5e0' : '#dceeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>{rzpDone ? '✅' : '💳'}</div>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: rzpDone ? '#1a7f37' : '#0071e3', margin: 0 }}>
-                        {rzpDone ? 'Payment Received!' : 'Pay Online'} <span style={{ background: rzpDone ? '#34c759' : '#0071e3', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, marginLeft: 4, verticalAlign: 'middle' }}>{rzpDone ? 'DONE' : 'RECOMMENDED'}</span>
-                      </p>
-                      <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>{rzpDone ? `₹${info.fee_amount || 1000} paid via Razorpay` : `Cards · UPI · Netbanking · ₹${info.fee_amount || 1000}`}</p>
-                    </div>
-                  </div>
-                  {!rzpDone && (
-                    <button onClick={handleRazorpayPay} disabled={rzpPaying}
-                      style={{ width: '100%', padding: '12px', background: rzpPaying ? '#86868b' : '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: rzpPaying ? 'not-allowed' : 'pointer' }}>
-                      {rzpPaying ? 'Opening payment…' : `💳 Pay ₹${info.fee_amount || 1000} Now`}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {/* Option 1: Scan QR */}
-              {info.upi_qr_image && (
-                <div style={{ border: '1px solid #e8e8ed', borderRadius: 14, padding: 16, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📷</div>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f', margin: 0 }}>Option 1 — Scan QR Code</p>
-                      <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>Works with any UPI app</p>
-                    </div>
-                  </div>
-                  <img src={info.upi_qr_image} alt="UPI QR" style={{ width: 160, height: 160, objectFit: 'contain', borderRadius: 10, border: '1px solid #e8e8ed', padding: 6, background: '#fff', margin: '0 auto', display: 'block' }} />
-                </div>
-              )}
-
-              {/* Option 2: Pay via App */}
-              {info.upi_vpa && (
-                <div style={{ border: '1px solid #e8e8ed', borderRadius: 14, padding: 16, marginBottom: 12 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: '#f5f5f7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>📱</div>
-                    <div>
-                      <p style={{ fontSize: 13, fontWeight: 700, color: '#1d1d1f', margin: 0 }}>Option 2 — Pay via App</p>
-                      <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>Opens app with ₹1,000 pre-filled</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {[
-                      { label: 'Google Pay', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg', logoBg: '#fff', href: `tez://upi/pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
-                      { label: 'PhonePe',    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg',   logoBg: '#fff', href: `phonepe://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
-                      { label: 'Paytm',      logo: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg', logoBg: '#00BAF2', href: `paytmmp://pay?pa=${encodeURIComponent(info.upi_vpa)}&pn=${encodeURIComponent(info.school_name)}&am=1000&cu=INR&tn=Monthly+Dance+Fee` },
-                    ].map(app => (
-                      <a key={app.label} href={app.href} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: '#f9f9f9', border: '1px solid #e8e8ed', borderRadius: 12, textDecoration: 'none' }}>
-                        <div style={{ width: 68, height: 32, background: app.logoBg, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px', boxSizing: 'border-box', border: '1px solid #eee', flexShrink: 0 }}>
-                          <img src={app.logo} alt={app.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                        </div>
-                        <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>Pay ₹1,000 with {app.label}</span>
-                        <span style={{ marginLeft: 'auto', fontSize: 16, color: '#0071e3' }}>›</span>
-                      </a>
-                    ))}
+              {/* Option 1: Pay Now (one-time) */}
+              <div style={{ border: rzpDone ? '2px solid #34c759' : '1px solid #e8e8ed', borderRadius: 14, padding: 16, marginBottom: 12, background: rzpDone ? '#f0fff4' : '#fff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: rzpDone ? 0 : 12 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background: rzpDone ? '#d1f5e0' : '#f0f6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{rzpDone ? '✅' : '💳'}</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: rzpDone ? '#1a7f37' : '#1d1d1f', margin: 0 }}>
+                      {rzpDone ? 'Payment Confirmed!' : 'Pay Now'}
+                    </p>
+                    <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>{rzpDone ? `₹${info.fee_amount || 1000} received` : `Cards · UPI · Netbanking · ₹${info.fee_amount || 1000}`}</p>
                   </div>
                 </div>
-              )}
-
-              {/* Option 3: Auto-Pay (like Netflix) — display only, no active links */}
-              <div style={{ border: '2px solid #d0e8ff', borderRadius: 14, padding: 16, marginBottom: 20, background: '#f8fbff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 8, background: '#e0f0ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>🔄</div>
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 700, color: '#0071e3', margin: 0 }}>Option 3 — Auto-Pay <span style={{ background: '#0071e3', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, marginLeft: 4, verticalAlign: 'middle' }}>Like Netflix</span></p>
-                    <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>Set once — ₹1,000 auto-debited every month</p>
-                  </div>
-                </div>
-                <p style={{ fontSize: 11, color: '#555', marginBottom: 12, lineHeight: 1.6, marginTop: 8 }}>
-                  Pay once and your UPI app auto-debits ₹1,000 every month — no manual payment needed.
-                </p>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {[
-                    { label: 'Google Pay', logo: 'https://upload.wikimedia.org/wikipedia/commons/f/f2/Google_Pay_Logo.svg', logoBg: '#fff' },
-                    { label: 'PhonePe',    logo: 'https://upload.wikimedia.org/wikipedia/commons/7/71/PhonePe_Logo.svg',   logoBg: '#fff' },
-                    { label: 'Paytm',      logo: 'https://upload.wikimedia.org/wikipedia/commons/2/24/Paytm_Logo_%28standalone%29.svg', logoBg: '#00BAF2' },
-                  ].map(app => (
-                    <div key={app.label} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', background: '#f0f6ff', border: '1px solid #d0e8ff', borderRadius: 12, opacity: 0.65 }}>
-                      <div style={{ width: 68, height: 32, background: app.logoBg, borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px 8px', boxSizing: 'border-box', border: '1px solid #eee', flexShrink: 0 }}>
-                        <img src={app.logo} alt={app.label} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                      </div>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: '#86868b' }}>{app.label}</span>
-                      <span style={{ marginLeft: 'auto', fontSize: 11, color: '#86868b', background: '#d0e8ff', padding: '2px 8px', borderRadius: 20, fontWeight: 500, whiteSpace: 'nowrap' }}>Coming soon</span>
-                    </div>
-                  ))}
-                </div>
+                {!rzpDone && (
+                  <button onClick={handleRazorpayPay} disabled={rzpPaying || rzpSubDone}
+                    style={{ width: '100%', padding: '12px', background: (rzpPaying || rzpSubDone) ? '#d2d2d7' : '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: (rzpPaying || rzpSubDone) ? 'not-allowed' : 'pointer' }}>
+                    {rzpPaying ? 'Opening payment…' : `💳 Pay ₹${info.fee_amount || 1000} Now`}
+                  </button>
+                )}
               </div>
+
+              {/* Option 2: Auto-Pay Monthly (Razorpay Subscription) */}
+              <div style={{ border: rzpSubDone ? '2px solid #34c759' : '2px solid #5856d6', borderRadius: 14, padding: 16, marginBottom: 20, background: rzpSubDone ? '#f0fff4' : '#faf9ff' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 9, background: rzpSubDone ? '#d1f5e0' : '#ece9ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{rzpSubDone ? '✅' : '🔄'}</div>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 700, color: rzpSubDone ? '#1a7f37' : '#5856d6', margin: 0 }}>
+                      {rzpSubDone ? 'Auto-Pay Activated!' : 'Auto-Pay Monthly'} <span style={{ background: rzpSubDone ? '#34c759' : '#5856d6', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, marginLeft: 4, verticalAlign: 'middle' }}>{rzpSubDone ? 'ACTIVE' : 'LIKE NETFLIX'}</span>
+                    </p>
+                    <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>
+                      {rzpSubDone ? `₹${info.fee_amount || 1000}/month auto-debited — no action needed` : `Authorize once — ₹${info.fee_amount || 1000} auto-debited every month`}
+                    </p>
+                  </div>
+                </div>
+                {!rzpSubDone && (
+                  <>
+                    <p style={{ fontSize: 11, color: '#666', lineHeight: 1.6, margin: '8px 0 12px' }}>
+                      Works like Netflix — your bank debits ₹{info.fee_amount || 1000} automatically on the same date each month. Cancel anytime.
+                    </p>
+                    <button onClick={handleRazorpaySubscribe} disabled={rzpSubPaying || rzpDone}
+                      style={{ width: '100%', padding: '12px', background: (rzpSubPaying || rzpDone) ? '#d2d2d7' : '#5856d6', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: (rzpSubPaying || rzpDone) ? 'not-allowed' : 'pointer' }}>
+                      {rzpSubPaying ? 'Setting up…' : '🔄 Set Up Auto-Pay'}
+                    </button>
+                  </>
+                )}
+              </div>
+
               {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '10px 14px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, background: paid ? '#f0fff4' : '#f5f5f7', border: `1px solid ${paid ? '#34c759' : '#e8e8ed'}`, borderRadius: 10, padding: '12px 16px', marginBottom: 16, cursor: 'pointer', transition: 'all 0.2s' }}>
-                <input type="checkbox" checked={paid} onChange={e => setPaid(e.target.checked)} style={{ width: 18, height: 18, accentColor: '#34c759', cursor: 'pointer' }} />
-                <span style={{ fontSize: 14, fontWeight: 600, color: paid ? '#1a7f37' : '#6e6e73' }}>
-                  {paid ? '✓ Payment confirmed' : 'I have made the UPI payment above'}
-                </span>
-              </label>
+
+              {/* Payment confirmed indicator */}
+              {paid && (
+                <div style={{ background: '#f0fff4', border: '1px solid #34c759', borderRadius: 10, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>✅</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#1a7f37' }}>Payment confirmed — you can complete your sign up</span>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setStep(2)} style={{ padding: '12px 20px', background: '#f5f5f7', border: 'none', borderRadius: 10, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← Back</button>
                 <button onClick={submit} disabled={loading || !paid}
