@@ -143,7 +143,7 @@ hr{border:none;border-top:1px solid #e8e8ed;margin:20px 0}
 </div></body></html>`;
 }
 
-async function sendWelcomeEmail(student, plainPassword, studentPlainPassword) {
+async function sendWelcomeEmail(student, plainPassword, studentPlainPassword, autoActivated = false) {
   const settings = getSettings();
   const s = settings.school_name || 'Tritiya Dance Studio';
   const appUrl = settings.app_url || '';
@@ -155,9 +155,13 @@ async function sendWelcomeEmail(student, plainPassword, studentPlainPassword) {
     <div class="box"><div class="lbl">Level</div><div class="val">${student.level}</div></div>
     ${student.monthly_fee ? `<div class="box"><div class="lbl">Monthly Fee</div><div class="val blue">${settings.currency || '₹'}${student.monthly_fee}</div></div>` : ''}
     <hr>
-    <p style="background:#fff8e1;border-left:4px solid #ff9500;padding:12px 16px;border-radius:6px;font-size:13px;color:#7a5a00;margin:16px 0">
+    ${autoActivated
+      ? `<p style="background:#f0fff4;border-left:4px solid #34c759;padding:12px 16px;border-radius:6px;font-size:13px;color:#1a7f37;margin:16px 0">
+      ✅ <strong>Account Active!</strong> Your payment was received and your account is ready. You can log in right away using the credentials below.
+    </p>`
+      : `<p style="background:#fff8e1;border-left:4px solid #ff9500;padding:12px 16px;border-radius:6px;font-size:13px;color:#7a5a00;margin:16px 0">
       ⚠️ <strong>Note:</strong> Your account will be activated once the teacher confirms your payment. You will be able to log in after activation.
-    </p>
+    </p>`}
     <hr>
     <p><strong>Parent Portal Login</strong></p>
     <p style="font-size:13px;color:#6e6e73">Track attendance, fees and lesson plans at <strong>/parent</strong>${appUrl ? ` (${appUrl}/parent)` : ''}:</p>
@@ -219,7 +223,13 @@ async function sendPaymentReminder(payment, student) {
     <div class="box"><div class="lbl">Due Date</div><div class="val">${new Date(payment.due_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>
     ${payment.description ? `<div class="box"><div class="lbl">Description</div><div class="val" style="font-size:15px">${payment.description}</div></div>` : ''}
     <p>Please make the payment at your earliest convenience.</p>
-    ${settings.upi_qr_image ? `<div style="text-align:center;margin:20px 0"><p style="font-size:14px;font-weight:600;color:#1d1d1f;margin-bottom:8px">💳 Pay via UPI</p><img src="${settings.upi_qr_image}" alt="UPI QR Code" style="max-width:200px;border-radius:12px;border:1px solid #e8e8ed;padding:10px;background:#fff" /></div>` : ''}
+    ${settings.razorpay_key_id && settings.app_url ? `
+    <div style="text-align:center;margin:24px 0">
+      <a href="${settings.app_url}/parent" style="display:inline-block;padding:14px 32px;background:#0071e3;color:#fff;text-decoration:none;border-radius:12px;font-size:15px;font-weight:600;letter-spacing:-.2px">
+        💳 Pay Online via Razorpay →
+      </a>
+      <p style="font-size:12px;color:#86868b;margin-top:10px">Log in to Parent Portal → tap <strong>Fees</strong> tab → Pay Now or Set Up Auto-Pay</p>
+    </div>` : settings.upi_qr_image ? `<div style="text-align:center;margin:20px 0"><p style="font-size:14px;font-weight:600;color:#1d1d1f;margin-bottom:8px">💳 Pay via UPI</p><img src="${settings.upi_qr_image}" alt="UPI QR Code" style="max-width:200px;border-radius:12px;border:1px solid #e8e8ed;padding:10px;background:#fff" /></div>` : ''}
     ${payment.reminder_count > 0 ? `<p style="font-size:13px;color:#86868b">Reminder #${payment.reminder_count + 1}</p>` : ''}
     <p>Regards,<br><strong>${s}</strong></p>
   `);

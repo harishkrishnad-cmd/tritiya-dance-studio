@@ -19,22 +19,150 @@ function AttendanceBadge({ status }) {
   return <span className="flex items-center gap-1 text-apple-orange text-xs"><Clock size={12}/>{status}</span>;
 }
 
-function PayNowModal({ onClose, upiQr }) {
+function RazorpayPayModal({ onClose, studentId, studentName }) {
+  const [feeInfo, setFeeInfo] = React.useState(null);
+  const [payMode, setPayMode] = React.useState('onetime');
+  const [paying, setPaying] = React.useState(false);
+  const [done, setDone] = React.useState(null);
+  const [error, setError] = React.useState('');
+
+  React.useEffect(() => {
+    fetch('/api/razorpay/info').then(r => r.json()).then(setFeeInfo).catch(() => {});
+    if (!window.Razorpay) {
+      const s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      document.body.appendChild(s);
+    }
+  }, []);
+
+  async function handleOneTime() {
+    if (!feeInfo?.razorpay_key_id) { setError('Online payment not configured. Please contact the studio.'); return; }
+    setPaying(true); setError('');
+    try {
+      const feeAmt = parseFloat(feeInfo.fee_amount || '1000');
+      const orderRes = await fetch('/api/razorpay/create-order', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: feeAmt, receipt: `fee_p_${studentId}_${Date.now()}`, notes: { student_id: String(studentId) } }),
+      });
+      const order = await orderRes.json();
+      if (!orderRes.ok) { setError(order.error || 'Could not create order'); setPaying(false); return; }
+      const rzp = new window.Razorpay({
+        key: order.key_id, amount: order.amount, currency: order.currency, order_id: order.order_id,
+        name: 'Tritiya Dance Studio', description: 'Monthly Dance Fee',
+        prefill: { name: studentName },
+        theme: { color: '#0071e3' },
+        handler: async (response) => {
+          const ver = await fetch('/api/razorpay/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...response, amount: order.amount, student_id: studentId, description: `Monthly Fee — ${studentName}` }),
+          }).then(r => r.json());
+          if (ver.success) setDone('onetime'); else setError(ver.error || 'Verification failed');
+          setPaying(false);
+        },
+        modal: { ondismiss: () => setPaying(false) },
+      });
+      rzp.open();
+    } catch (err) { setError(err.message); setPaying(false); }
+  }
+
+  async function handleAutoSub() {
+    if (!feeInfo?.razorpay_key_id) { setError('Online payment not configured. Please contact the studio.'); return; }
+    setPaying(true); setError('');
+    try {
+      const subRes = await fetch('/api/razorpay/create-subscription', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: { student_id: String(studentId) } }),
+      });
+      const sub = await subRes.json();
+      if (!subRes.ok) { setError(sub.error || 'Could not create subscription'); setPaying(false); return; }
+      const rzp = new window.Razorpay({
+        key: sub.key_id, subscription_id: sub.subscription_id,
+        name: 'Tritiya Dance Studio', description: 'Monthly Dance Fee — Auto-Pay',
+        prefill: { name: studentName },
+        theme: { color: '#34c759' },
+        handler: async (response) => {
+          const ver = await fetch('/api/razorpay/verify-subscription', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...response, student_id: studentId, description: `Auto-Pay — ${studentName}` }),
+          }).then(r => r.json());
+          if (ver.success) setDone('autopay'); else setError(ver.error || 'Verification failed');
+          setPaying(false);
+        },
+        modal: { ondismiss: () => setPaying(false) },
+      });
+      rzp.open();
+    } catch (err) { setError(err.message); setPaying(false); }
+  }
+
+  const fee = feeInfo?.fee_amount || '—';
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }} onClick={onClose}>
-      <div style={{ background: '#fff', borderRadius: 20, padding: 32, maxWidth: 340, width: '100%', textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-        <div style={{ fontSize: 28, marginBottom: 8 }}>💳</div>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: '#1d1d1f', marginBottom: 4 }}>Pay via UPI</h2>
-        <p style={{ fontSize: 13, color: '#86868b', marginBottom: 20 }}>Scan the QR code with any UPI app to pay your fees</p>
-        {upiQr ? (
-          <img src={upiQr} alt="UPI QR Code" style={{ width: 200, height: 200, objectFit: 'contain', borderRadius: 12, border: '1px solid #e8e8ed', padding: 8, margin: '0 auto', display: 'block' }} />
-        ) : (
-          <div style={{ width: 200, height: 200, background: '#f5f5f7', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', color: '#86868b', fontSize: 13 }}>
-            QR code not configured yet.<br/>Contact the studio.
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0 0 0' }} onClick={onClose}>
+      <div style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '28px 24px 32px', width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: 40, height: 4, background: '#e8e8ed', borderRadius: 2, margin: '0 auto 20px' }} />
+
+        {done ? (
+          <div style={{ textAlign: 'center', padding: '8px 0' }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>{done === 'autopay' ? '🔄' : '✅'}</div>
+            <h3 style={{ fontSize: 18, fontWeight: 700, color: '#1d1d1f', marginBottom: 6 }}>
+              {done === 'autopay' ? 'Auto-Pay Activated!' : 'Payment Successful!'}
+            </h3>
+            <p style={{ fontSize: 13, color: '#6e6e73', lineHeight: 1.6, marginBottom: 20 }}>
+              {done === 'autopay'
+                ? `₹${fee}/month will be automatically debited each month. Cancel anytime via Razorpay.`
+                : `₹${fee} received. Your payment has been recorded.`}
+            </p>
+            <button onClick={onClose} style={{ padding: '11px 28px', background: '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Done</button>
           </div>
+        ) : (
+          <>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: '#1d1d1f', marginBottom: 2 }}>Pay Fees</h3>
+            <p style={{ fontSize: 13, color: '#86868b', marginBottom: 16 }}>Monthly fee for {studentName}</p>
+
+            <div style={{ background: '#f5f5f7', borderRadius: 12, padding: '12px 16px', marginBottom: 18, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13, color: '#6e6e73' }}>Amount due</span>
+              <span style={{ fontSize: 20, fontWeight: 700, color: '#1d1d1f' }}>₹{fee}</span>
+            </div>
+
+            {/* Mode tabs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+              <button onClick={() => setPayMode('onetime')}
+                style={{ padding: '12px 8px', borderRadius: 12, border: `2px solid ${payMode === 'onetime' ? '#0071e3' : '#e8e8ed'}`, background: payMode === 'onetime' ? '#f0f6ff' : '#fafafa', cursor: 'pointer', textAlign: 'center' }}>
+                <p style={{ fontSize: 20, marginBottom: 4 }}>💳</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: payMode === 'onetime' ? '#0071e3' : '#1d1d1f', margin: 0 }}>Pay Now</p>
+                <p style={{ fontSize: 11, color: '#86868b', marginTop: 2 }}>One-time · ₹{fee}</p>
+              </button>
+              <button onClick={() => setPayMode('autopay')}
+                style={{ padding: '12px 8px', borderRadius: 12, border: `2px solid ${payMode === 'autopay' ? '#34c759' : '#e8e8ed'}`, background: payMode === 'autopay' ? '#f0fff4' : '#fafafa', cursor: 'pointer', textAlign: 'center', position: 'relative' }}>
+                <div style={{ position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: '#34c759', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, whiteSpace: 'nowrap' }}>RECOMMENDED</div>
+                <p style={{ fontSize: 20, marginBottom: 4 }}>🔄</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: payMode === 'autopay' ? '#1a7f37' : '#1d1d1f', margin: 0 }}>Auto-Pay</p>
+                <p style={{ fontSize: 11, color: '#86868b', marginTop: 2 }}>₹{fee}/month</p>
+              </button>
+            </div>
+
+            {payMode === 'autopay' && (
+              <div style={{ background: '#f0fff4', borderRadius: 10, padding: '9px 13px', marginBottom: 14, fontSize: 12, color: '#1a7f37' }}>
+                🔄 Auto-debited every month — no need to pay manually. Cancel anytime.
+              </div>
+            )}
+
+            {error && <div style={{ background: '#fff2f0', color: '#ff3b30', fontSize: 13, padding: '9px 13px', borderRadius: 8, marginBottom: 12 }}>{error}</div>}
+
+            {payMode === 'onetime' ? (
+              <button onClick={handleOneTime} disabled={paying || !feeInfo}
+                style={{ width: '100%', padding: '14px', background: paying ? '#86868b' : '#0071e3', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: paying ? 'not-allowed' : 'pointer', marginBottom: 8 }}>
+                {paying ? 'Opening Razorpay…' : `💳 Pay ₹${fee} Now`}
+              </button>
+            ) : (
+              <button onClick={handleAutoSub} disabled={paying || !feeInfo}
+                style={{ width: '100%', padding: '14px', background: paying ? '#86868b' : '#34c759', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: paying ? 'not-allowed' : 'pointer', marginBottom: 8 }}>
+                {paying ? 'Setting up…' : `🔄 Set Up ₹${fee}/month Auto-Pay`}
+              </button>
+            )}
+            <button onClick={onClose} style={{ width: '100%', padding: '11px', background: 'none', border: 'none', fontSize: 14, color: '#86868b', cursor: 'pointer' }}>Cancel</button>
+          </>
         )}
-        <p style={{ fontSize: 12, color: '#86868b', marginTop: 16 }}>PhonePe · Google Pay · Paytm · BHIM</p>
-        <button onClick={onClose} style={{ marginTop: 20, padding: '10px 28px', background: '#1c1c1e', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>Close</button>
       </div>
     </div>
   );
@@ -47,15 +175,8 @@ export default function ParentDashboard({ studentId, onLogout }) {
   const [payments, setPayments] = useState(null);
   const [plans, setPlans] = useState(null);
   const [showPayModal, setShowPayModal] = useState(false);
-  const [upiQr, setUpiQr] = useState('');
 
   useEffect(() => { api.getParentStudent(studentId).then(setProfile).catch(() => {}); }, [studentId]);
-
-  useEffect(() => {
-    fetch('/api/website/public').then(r => r.json()).then(d => {
-      setUpiQr(d.settings?.upi_qr_image || '');
-    }).catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (tab === 'attendance' && !attendance) api.getParentAttendance(studentId).then(setAttendance).catch(() => {});
@@ -200,9 +321,9 @@ export default function ParentDashboard({ studentId, onLogout }) {
                   ))}
                 </div>
               )}
-              {showPayModal && <PayNowModal onClose={() => setShowPayModal(false)} upiQr={upiQr} />}
+              {showPayModal && <RazorpayPayModal onClose={() => setShowPayModal(false)} studentId={studentId} studentName={profile?.name || ''} />}
               <button onClick={() => setShowPayModal(true)} className="w-full btn-primary flex items-center justify-center gap-2 py-3">
-                💳 Pay Now via UPI
+                💳 Pay Fees Online
               </button>
               <div className="card divide-y divide-apple-gray-2/60">
                 {payments.records?.length === 0 && <p className="text-sm text-apple-gray-4 py-4 text-center">No payment records yet</p>}

@@ -86,8 +86,8 @@ router.post('/submit/:token', async (req, res) => {
     // Increment uses count
     db.prepare('UPDATE enrollment_links SET uses_count = uses_count + 1 WHERE id=?').run(link.id);
 
-    // Send welcome email with both credentials
-    sendWelcomeEmail(student, password, studentPassword).catch(console.error);
+    // Send welcome email — pass autoActivated so email shows correct status
+    sendWelcomeEmail(student, password, studentPassword, autoActivate === 1).catch(console.error);
 
     res.json({
       success: true,

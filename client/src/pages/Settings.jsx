@@ -156,6 +156,11 @@ export default function Settings({ onNameChange }) {
             <div><label className="label">Currency Symbol</label><input className="input" value={s.currency||'₹'} onChange={e=>set('currency',e.target.value)}/></div>
             <div><label className="label">Fee Due Day of Month</label><input type="number" min="1" max="28" className="input" value={s.payment_due_day||'1'} onChange={e=>set('payment_due_day',e.target.value)}/></div>
           </div>
+          <div>
+            <label className="label">Website / App URL</label>
+            <input className="input" value={s.app_url||''} onChange={e=>set('app_url',e.target.value)} placeholder="https://www.tritiya.in"/>
+            <p className="text-xs text-apple-gray-4 mt-1">Used in payment reminder emails to generate a direct "Pay Online" link. Must be your live domain (e.g. https://www.tritiya.in).</p>
+          </div>
         </div>
       </Section>
 
@@ -384,6 +389,13 @@ export default function Settings({ onNameChange }) {
           <label className="label">Monthly Fee Amount (₹)</label>
           <input className="input" type="number" value={s.fee_amount||'1000'} onChange={e=>set('fee_amount',e.target.value)} placeholder="1000" />
           <p className="text-xs text-apple-gray-4 mt-1">This amount is shown on the enrollment form Pay Online button.</p>
+        </div>
+        <div>
+          <label className="label">Razorpay Subscription Plan ID</label>
+          <input className="input" value={s.razorpay_plan_id||''} onChange={e=>set('razorpay_plan_id',e.target.value)} placeholder="plan_xxxxxxxxxxxx" />
+          <p className="text-xs text-apple-gray-4 mt-1">
+            Your existing monthly plan ID from <strong>Razorpay Dashboard → Subscriptions → Plans</strong>. If set, this plan is used for Auto-Pay. Leave blank to auto-create a plan.
+          </p>
         </div>
       </Section>
 

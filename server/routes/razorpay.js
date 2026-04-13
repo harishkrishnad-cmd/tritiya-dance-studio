@@ -107,10 +107,11 @@ router.post('/create-subscription', async (req, res) => {
     const s = getSettings();
     const feeAmount = Math.round(parseFloat(s.fee_amount || '1000') * 100); // paise
 
-    // Reuse cached plan if amount hasn't changed, otherwise create a new one
-    let planId = s.razorpay_plan_id;
-    const cachedAmt = parseInt(s.razorpay_plan_amount || '0');
-    if (!planId || cachedAmt !== feeAmount) {
+    // Use admin-configured plan ID if present (e.g. one created in Razorpay Dashboard)
+    // Only auto-create a plan if no plan ID is configured in Settings
+    let planId = s.razorpay_plan_id || '';
+    if (!planId) {
+      // No plan configured — create one automatically and save for reuse
       const plan = await rzp.instance.plans.create({
         period: 'monthly',
         interval: 1,
@@ -122,9 +123,10 @@ router.post('/create-subscription', async (req, res) => {
         },
       });
       planId = plan.id;
-      const upsert = db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)");
-      upsert.run('razorpay_plan_id', planId);
-      upsert.run('razorpay_plan_amount', String(feeAmount));
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run('razorpay_plan_id', planId);
+      console.log(`[Razorpay] Auto-created plan: ${planId}`);
+    } else {
+      console.log(`[Razorpay] Using configured plan: ${planId}`);
     }
 
     const subscription = await rzp.instance.subscriptions.create({
