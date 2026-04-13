@@ -276,8 +276,14 @@ export default function Students() {
     finally { setSaving(false); }
   }
   async function handleDelete(s) {
-    if (!confirm(`Remove ${s.name}?`)) return;
-    await api.deleteStudent(s.id); load();
+    if (!confirm(`Remove ${s.name}? They will be marked as left and removed from the active list.`)) return;
+    try {
+      await api.deleteStudent(s.id);
+      load();
+      loadPending();
+    } catch (err) {
+      alert('Could not remove student: ' + (err.message || 'Unknown error'));
+    }
   }
 
   const filtered = students.filter(s =>

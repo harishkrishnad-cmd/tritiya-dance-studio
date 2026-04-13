@@ -140,9 +140,10 @@ router.put('/:id', (req, res) => {
   res.json(db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id));
 });
 
-// Delete (soft)
+// Delete (soft) — set both active=0 AND status='left' so the list query
+// (which filters by status, not active) actually removes them from the default view
 router.delete('/:id', (req, res) => {
-  db.prepare('UPDATE students SET active = 0 WHERE id = ?').run(req.params.id);
+  db.prepare("UPDATE students SET active = 0, status = 'left' WHERE id = ?").run(req.params.id);
   res.json({ success: true });
 });
 
