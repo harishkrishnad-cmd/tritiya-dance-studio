@@ -17,6 +17,7 @@ export default function SignupPage() {
   const [paid, setPaid] = useState(false);
   const [rzpPaying, setRzpPaying] = useState(false);
   const [rzpDone, setRzpDone] = useState(false);
+  const [payMode, setPayMode] = useState('onetime');
   const [form, setForm] = useState({
     student_name: '', date_of_birth: '', level: 'Beginner',
     parent_name: '', parent_email: '', parent_phone: '', address: '', notes: '',
@@ -83,13 +84,55 @@ export default function SignupPage() {
     }
   }
 
+  async function handleRazorpaySubscribe() {
+    setRzpPaying(true); setError('');
+    try {
+      const subRes = await fetch('/api/razorpay/create-subscription', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: { student: form.student_name } }),
+      });
+      const sub = await subRes.json();
+      if (!subRes.ok) { setError(sub.error || 'Could not create subscription'); setRzpPaying(false); return; }
+
+      const rzp = new window.Razorpay({
+        key: sub.key_id,
+        subscription_id: sub.subscription_id,
+        name: info.school_name,
+        description: `Monthly Dance Fee — Auto-Pay`,
+        prefill: { name: form.parent_name, email: form.parent_email, contact: form.parent_phone },
+        theme: { color: '#34c759' },
+        handler: async (response) => {
+          const verRes = await fetch('/api/razorpay/verify-subscription', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_subscription_id: response.razorpay_subscription_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              description: `Monthly Auto-Pay — ${form.student_name}`,
+            }),
+          });
+          const ver = await verRes.json();
+          if (ver.success) { setRzpDone(true); setPaid(true); }
+          else setError(ver.error || 'Subscription verification failed');
+          setRzpPaying(false);
+        },
+        modal: { ondismiss: () => setRzpPaying(false) },
+      });
+      rzp.open();
+    } catch (err) {
+      setError('Subscription error: ' + err.message);
+      setRzpPaying(false);
+    }
+  }
+
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   async function submit() {
     setLoading(true);
     try {
       const res = await fetch(`/api/enroll/submit/${token}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form, razorpay_paid: rzpDone }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); setLoading(false); return; }
@@ -226,22 +269,53 @@ export default function SignupPage() {
                   <span style={{ fontSize: 13, fontWeight: 600, color: '#1d1d1f' }}>{form.parent_email}</span>
                 </div>
               </div>
-              {/* Razorpay payment */}
+              {/* Payment options */}
               {rzpDone ? (
                 <div style={{ background: '#f0fff4', border: '2px solid #34c759', borderRadius: 14, padding: 20, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span style={{ fontSize: 28 }}>✅</span>
                   <div>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: '#1a7f37', margin: 0 }}>Payment Confirmed!</p>
-                    <p style={{ fontSize: 12, color: '#86868b', margin: 0 }}>₹{info.fee_amount || 1000} received via Razorpay</p>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: '#1a7f37', margin: 0 }}>
+                      {payMode === 'autopay' ? 'Auto-Pay Activated!' : 'Payment Confirmed!'}
+                    </p>
+                    <p style={{ fontSize: 12, color: '#86868b', margin: 0 }}>
+                      {payMode === 'autopay' ? `₹${info.fee_amount || 1000}/month · Auto-debited via Razorpay` : `₹${info.fee_amount || 1000} received via Razorpay`}
+                    </p>
                   </div>
                 </div>
               ) : (
                 <div style={{ marginBottom: 20 }}>
-                  <button onClick={handleRazorpayPay} disabled={rzpPaying}
-                    style={{ width: '100%', padding: '14px', background: rzpPaying ? '#86868b' : '#0071e3', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: rzpPaying ? 'not-allowed' : 'pointer' }}>
-                    {rzpPaying ? 'Opening Razorpay…' : `💳 Pay ₹${info.fee_amount || 1000}`}
-                  </button>
-                  <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', marginTop: 8 }}>Cards · UPI · Netbanking · UPI AutoPay — powered by Razorpay</p>
+                  <p style={{ fontSize: 12, fontWeight: 600, color: '#6e6e73', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Choose Payment Method</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+                    <button onClick={() => setPayMode('onetime')}
+                      style={{ padding: '12px 10px', borderRadius: 12, border: `2px solid ${payMode === 'onetime' ? '#0071e3' : '#e8e8ed'}`, background: payMode === 'onetime' ? '#f0f6ff' : '#fff', cursor: 'pointer', textAlign: 'center' }}>
+                      <p style={{ fontSize: 18, marginBottom: 4 }}>💳</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: payMode === 'onetime' ? '#0071e3' : '#1d1d1f', margin: 0 }}>Pay Now</p>
+                      <p style={{ fontSize: 11, color: '#86868b', marginTop: 2 }}>₹{info.fee_amount || 1000} one-time</p>
+                    </button>
+                    <button onClick={() => setPayMode('autopay')}
+                      style={{ padding: '12px 10px', borderRadius: 12, border: `2px solid ${payMode === 'autopay' ? '#34c759' : '#e8e8ed'}`, background: payMode === 'autopay' ? '#f0fff4' : '#fff', cursor: 'pointer', textAlign: 'center' }}>
+                      <p style={{ fontSize: 18, marginBottom: 4 }}>🔄</p>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: payMode === 'autopay' ? '#1a7f37' : '#1d1d1f', margin: 0 }}>Auto-Pay</p>
+                      <p style={{ fontSize: 11, color: '#86868b', marginTop: 2 }}>₹{info.fee_amount || 1000}/month</p>
+                    </button>
+                  </div>
+                  {payMode === 'onetime' ? (
+                    <>
+                      <button onClick={handleRazorpayPay} disabled={rzpPaying}
+                        style={{ width: '100%', padding: '14px', background: rzpPaying ? '#86868b' : '#0071e3', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: rzpPaying ? 'not-allowed' : 'pointer' }}>
+                        {rzpPaying ? 'Opening Razorpay…' : `💳 Pay ₹${info.fee_amount || 1000} Now`}
+                      </button>
+                      <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', marginTop: 6 }}>Cards · UPI · Net banking — powered by Razorpay</p>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={handleRazorpaySubscribe} disabled={rzpPaying}
+                        style={{ width: '100%', padding: '14px', background: rzpPaying ? '#86868b' : '#34c759', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 600, cursor: rzpPaying ? 'not-allowed' : 'pointer' }}>
+                        {rzpPaying ? 'Setting up…' : `🔄 Set Up ₹${info.fee_amount || 1000}/month Auto-Pay`}
+                      </button>
+                      <p style={{ fontSize: 11, color: '#86868b', textAlign: 'center', marginTop: 6 }}>Auto-debited every month · Cancel anytime via Razorpay</p>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -267,7 +341,16 @@ export default function SignupPage() {
             </p>
             <div style={{ background: '#f5f5f7', borderRadius: 12, padding: 16, marginBottom: 24, textAlign: 'left' }}>
               <p style={{ fontSize: 13, color: '#86868b', marginBottom: 4 }}>What's next?</p>
-              <p style={{ fontSize: 14, color: '#1d1d1f', lineHeight: 1.7 }}>✓ Check your email for login details<br/>✓ Log in to the Parent Portal to track attendance & fees<br/>✓ Your teacher will confirm the class schedule</p>
+              {rzpDone ? (
+                <p style={{ fontSize: 14, color: '#1d1d1f', lineHeight: 1.7 }}>
+                  ✅ Payment confirmed — your account is <strong>active immediately</strong><br/>
+                  ✓ Check your email for login credentials<br/>
+                  ✓ Log in to the Parent Portal right now<br/>
+                  {payMode === 'autopay' && '🔄 Monthly fee will be auto-debited via Razorpay'}
+                </p>
+              ) : (
+                <p style={{ fontSize: 14, color: '#1d1d1f', lineHeight: 1.7 }}>✓ Check your email for login details<br/>✓ Your teacher will activate your account<br/>✓ Log in to the Parent Portal to track attendance & fees</p>
+              )}
             </div>
             <a href="/parent" style={{ display: 'inline-block', padding: '12px 28px', background: '#0071e3', color: '#fff', borderRadius: 10, fontSize: 14, fontWeight: 500, textDecoration: 'none', marginRight: 12 }}>Go to Parent Portal</a>
             <a href="/" style={{ display: 'inline-block', padding: '12px 28px', background: '#1c1c1e', color: '#fff', borderRadius: 10, fontSize: 14, fontWeight: 500, textDecoration: 'none' }}>← Back to Studio</a>

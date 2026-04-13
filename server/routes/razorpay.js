@@ -15,6 +15,12 @@ function makeRazorpay() {
   return { instance: new Razorpay({ key_id: s.razorpay_key_id, key_secret: s.razorpay_key_secret }), key_id: s.razorpay_key_id, key_secret: s.razorpay_key_secret };
 }
 
+// GET /api/razorpay/info — public, returns key_id + fee for student portal
+router.get('/info', (req, res) => {
+  const s = getSettings();
+  res.json({ razorpay_key_id: s.razorpay_key_id || '', fee_amount: s.fee_amount || '1000' });
+});
+
 // POST /api/razorpay/create-order
 // Public endpoint — called from enrollment form (no auth token available)
 router.post('/create-order', async (req, res) => {
