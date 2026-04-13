@@ -12,6 +12,7 @@ router.get('/', (req, res) => {
   if (s.smtp_pass) s.smtp_pass = '••••••••';
   if (s.twilio_auth_token) s.twilio_auth_token = '••••••••';
   if (s.email_api_key) s.email_api_key = '••••••••';
+  if (s.razorpay_key_secret) s.razorpay_key_secret = '••••••••';
   res.json(s);
 });
 
@@ -19,7 +20,7 @@ router.post('/', (req, res) => {
   const upsert = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
   const saveAll = db.transaction((data) => {
     for (const [key, value] of Object.entries(data)) {
-      if ((key === 'smtp_pass' || key === 'twilio_auth_token' || key === 'email_api_key') && (value === '••••••••' || value === '')) continue;
+      if ((key === 'smtp_pass' || key === 'twilio_auth_token' || key === 'email_api_key' || key === 'razorpay_key_secret') && (value === '••••••••' || value === '')) continue;
       upsert.run(key, value);
     }
   });

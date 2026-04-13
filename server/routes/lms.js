@@ -10,6 +10,10 @@ router.get('/courses', authMiddleware, (req, res) => {
   courses.forEach(c => {
     c.materials = db.prepare("SELECT * FROM course_materials WHERE course_id=? ORDER BY sort_order").all(c.id);
     c.quiz = db.prepare("SELECT * FROM quizzes WHERE course_id=?").get(c.id) || null;
+    if (c.quiz) {
+      c.quiz.questions = db.prepare("SELECT * FROM quiz_questions WHERE quiz_id=? ORDER BY sort_order").all(c.quiz.id);
+      c.quiz.questions.forEach(q => { try { q.options = JSON.parse(q.options); } catch { q.options = []; } });
+    }
   });
   res.json(courses);
 });

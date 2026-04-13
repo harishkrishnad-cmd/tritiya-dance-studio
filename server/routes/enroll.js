@@ -39,6 +39,8 @@ router.get('/info/:token', (req, res) => {
     upi_qr_image: settings.upi_qr_image || '',
     upi_vpa: settings.upi_vpa || '',
     currency: settings.currency || '₹',
+    razorpay_key_id: settings.razorpay_key_id || '',
+    fee_amount: settings.fee_amount || '1000',
   });
 });
 

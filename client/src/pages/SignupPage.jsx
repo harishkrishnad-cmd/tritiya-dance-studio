@@ -15,6 +15,8 @@ export default function SignupPage() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [rzpPaying, setRzpPaying] = useState(false);
+  const [rzpDone, setRzpDone] = useState(false);
   const [form, setForm] = useState({
     student_name: '', date_of_birth: '', level: 'Beginner',
     parent_name: '', parent_email: '', parent_phone: '', address: '', notes: '',
@@ -26,6 +28,60 @@ export default function SignupPage() {
       .then(d => { if (d.valid) setInfo(d); else setError(d.error || 'Invalid link'); })
       .catch(() => setError('Unable to load signup form. Please check the link.'));
   }, [token]);
+
+  // Load Razorpay checkout.js when reaching payment step
+  useEffect(() => {
+    if (step === 3 && info?.razorpay_key_id && !window.Razorpay) {
+      const s = document.createElement('script');
+      s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      document.body.appendChild(s);
+    }
+  }, [step, info]);
+
+  async function handleRazorpayPay() {
+    setRzpPaying(true); setError('');
+    try {
+      const feeAmt = parseFloat(info.fee_amount || '1000');
+      const orderRes = await fetch('/api/razorpay/create-order', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: feeAmt, receipt: `signup_${Date.now()}`, notes: { student: form.student_name } }),
+      });
+      const order = await orderRes.json();
+      if (!orderRes.ok) { setError(order.error || 'Could not create payment order'); setRzpPaying(false); return; }
+
+      const rzp = new window.Razorpay({
+        key: order.key_id,
+        amount: order.amount,
+        currency: order.currency,
+        order_id: order.order_id,
+        name: info.school_name,
+        description: 'Monthly Dance Fee',
+        prefill: { name: form.parent_name, email: form.parent_email, contact: form.parent_phone },
+        theme: { color: '#0071e3' },
+        handler: async (response) => {
+          const verRes = await fetch('/api/razorpay/verify', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              amount: order.amount,
+              description: `Monthly Dance Fee — ${form.student_name}`,
+            }),
+          });
+          const ver = await verRes.json();
+          if (ver.success) { setRzpDone(true); setPaid(true); }
+          else setError(ver.error || 'Payment verification failed');
+          setRzpPaying(false);
+        },
+        modal: { ondismiss: () => setRzpPaying(false) },
+      });
+      rzp.open();
+    } catch (err) {
+      setError('Payment error: ' + err.message);
+      setRzpPaying(false);
+    }
+  }
 
   function set(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
@@ -172,6 +228,27 @@ export default function SignupPage() {
               </div>
               {/* Payment Options */}
               <p style={{ fontSize: 12, fontWeight: 700, color: '#86868b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12 }}>Choose a payment method</p>
+
+              {/* Razorpay — Pay Online */}
+              {info.razorpay_key_id && (
+                <div style={{ border: rzpDone ? '2px solid #34c759' : '2px solid #0071e3', borderRadius: 14, padding: 16, marginBottom: 12, background: rzpDone ? '#f0fff4' : '#f0f6ff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: rzpDone ? '#d1f5e0' : '#dceeff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>{rzpDone ? '✅' : '💳'}</div>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: rzpDone ? '#1a7f37' : '#0071e3', margin: 0 }}>
+                        {rzpDone ? 'Payment Received!' : 'Pay Online'} <span style={{ background: rzpDone ? '#34c759' : '#0071e3', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, marginLeft: 4, verticalAlign: 'middle' }}>{rzpDone ? 'DONE' : 'RECOMMENDED'}</span>
+                      </p>
+                      <p style={{ fontSize: 11, color: '#86868b', margin: 0 }}>{rzpDone ? `₹${info.fee_amount || 1000} paid via Razorpay` : `Cards · UPI · Netbanking · ₹${info.fee_amount || 1000}`}</p>
+                    </div>
+                  </div>
+                  {!rzpDone && (
+                    <button onClick={handleRazorpayPay} disabled={rzpPaying}
+                      style={{ width: '100%', padding: '12px', background: rzpPaying ? '#86868b' : '#0071e3', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: rzpPaying ? 'not-allowed' : 'pointer' }}>
+                      {rzpPaying ? 'Opening payment…' : `💳 Pay ₹${info.fee_amount || 1000} Now`}
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Option 1: Scan QR */}
               {info.upi_qr_image && (

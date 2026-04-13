@@ -368,6 +368,25 @@ export default function Settings({ onNameChange }) {
         </div>
       </Section>
 
+      <Section title="Razorpay Online Payments" icon={CreditCard}>
+        <p className="text-xs text-apple-gray-4">Accept online card / UPI / netbanking payments via Razorpay. Get your API keys from <strong>razorpay.com → Settings → API Keys</strong>.</p>
+        <div>
+          <label className="label">Razorpay Key ID</label>
+          <input className="input" value={s.razorpay_key_id||''} onChange={e=>set('razorpay_key_id',e.target.value)} placeholder="rzp_live_... or rzp_test_..." />
+          <p className="text-xs text-apple-gray-4 mt-1">Starts with <code>rzp_live_</code> for production or <code>rzp_test_</code> for testing.</p>
+        </div>
+        <div>
+          <label className="label">Razorpay Key Secret</label>
+          <input className="input" type="password" value={s.razorpay_key_secret||''} onChange={e=>set('razorpay_key_secret',e.target.value)} placeholder="Enter key secret (saved securely)" />
+          <p className="text-xs text-apple-gray-4 mt-1">Never share this. Stored securely and never displayed again once saved.</p>
+        </div>
+        <div>
+          <label className="label">Monthly Fee Amount (₹)</label>
+          <input className="input" type="number" value={s.fee_amount||'1000'} onChange={e=>set('fee_amount',e.target.value)} placeholder="1000" />
+          <p className="text-xs text-apple-gray-4 mt-1">This amount is shown on the enrollment form Pay Online button.</p>
+        </div>
+      </Section>
+
       <Section title="Payment UPI QR Code" icon={CreditCard}>
         <p className="text-xs text-apple-gray-4">Upload your UPI QR code — it will appear in welcome emails and payment reminders.</p>
         <div>

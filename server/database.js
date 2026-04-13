@@ -278,6 +278,11 @@ db.exec("UPDATE students SET status='inactive' WHERE active=0 AND (status IS NUL
 if (!cols.includes('account_active')) db.exec("ALTER TABLE students ADD COLUMN account_active INTEGER DEFAULT 1");
 // Existing manually-added students are already activated; enrollment form submissions set this to 0
 
+// Razorpay payment tracking columns
+const payCols = db.prepare("PRAGMA table_info(payments)").all().map(c => c.name);
+if (!payCols.includes('razorpay_payment_id')) db.exec("ALTER TABLE payments ADD COLUMN razorpay_payment_id TEXT");
+if (!payCols.includes('razorpay_order_id')) db.exec("ALTER TABLE payments ADD COLUMN razorpay_order_id TEXT");
+
 const upsert = db.prepare(`INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)`);
 const defaults = [
   ['school_name', 'Tritiya Dance Studio'],

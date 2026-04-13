@@ -59,6 +59,9 @@ app.use('/api/otp',         require('./routes/otp'));
 // LMS (courses, quizzes, progress)
 app.use('/api/lms',         authMiddleware, require('./routes/lms'));
 
+// Razorpay (public — called from enrollment form)
+app.use('/api/razorpay',    require('./routes/razorpay'));
+
 // Backup / restore
 app.use('/api/backup',      require('./routes/backup'));
 
