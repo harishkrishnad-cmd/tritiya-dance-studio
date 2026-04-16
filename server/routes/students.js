@@ -146,17 +146,27 @@ router.put('/:id', (req, res) => {
 
 // Delete — soft for active students (moves to Left tab), hard for already-left/inactive students
 router.delete('/:id', (req, res) => {
-  const student = db.prepare('SELECT status FROM students WHERE id = ?').get(req.params.id);
-  if (!student) return res.status(404).json({ error: 'Not found' });
-  if (student.status === 'left' || student.status === 'inactive') {
-    // Permanently remove — null out payment student_id so payment history isn't lost
-    db.prepare('UPDATE payments SET student_id = NULL WHERE student_id = ?').run(req.params.id);
-    db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
-  } else {
-    // Soft delete — move to Left tab, keeps history intact
-    db.prepare("UPDATE students SET active = 0, status = 'left' WHERE id = ?").run(req.params.id);
+  try {
+    const student = db.prepare('SELECT status FROM students WHERE id = ?').get(req.params.id);
+    if (!student) return res.status(404).json({ error: 'Not found' });
+    if (student.status === 'left' || student.status === 'inactive') {
+      // Hard delete — null out non-cascading FK references first (whatsapp_logs, email_logs, payments)
+      // then let ON DELETE CASCADE handle the rest (attendance, student_classes, etc.)
+      db.transaction(() => {
+        db.prepare('UPDATE payments SET student_id = NULL WHERE student_id = ?').run(req.params.id);
+        db.prepare('UPDATE whatsapp_logs SET student_id = NULL WHERE student_id = ?').run(req.params.id);
+        db.prepare('UPDATE email_logs SET student_id = NULL WHERE student_id = ?').run(req.params.id);
+        db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
+      })();
+    } else {
+      // Soft delete — move to Left tab
+      db.prepare("UPDATE students SET active = 0, status = 'left' WHERE id = ?").run(req.params.id);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete student error:', err.message);
+    res.status(500).json({ error: err.message });
   }
-  res.json({ success: true });
 });
 
 // Enroll in class
