@@ -35,6 +35,20 @@ const badge = s => {
   return <span className="badge-pending">Pending</span>;
 };
 
+const typeBadge = method => {
+  if (!method) return null;
+  const m = method.toLowerCase();
+  if (m === 'razorpay_autopay') return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-green-100 text-apple-green whitespace-nowrap">🔄 Auto-Pay</span>;
+  if (m === 'razorpay') return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-apple-blue whitespace-nowrap">💳 Online</span>;
+  return <span className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-apple-gray text-apple-gray-5 whitespace-nowrap">{method}</span>;
+};
+
+const monthLabel = due_date => {
+  if (!due_date) return '—';
+  const d = new Date(due_date);
+  return d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+};
+
 function MarkPaidModal({ payment, onClose, onDone }) {
   const [method,setMethod]=useState('Cash');
   const [paidDate,setPaidDate]=useState(new Date().toISOString().split('T')[0]);
@@ -281,18 +295,18 @@ export default function Payments() {
         ) : (
           <table className="w-full text-sm">
             <thead><tr className="border-b border-apple-gray-2">
-              {['Student','Amount','Due Date','Status','Reminders',''].map(h=><th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-apple-gray-5 uppercase tracking-wide">{h}</th>)}
+              {['Student','Amount','Month','Type','Status','Reminders',''].map(h=><th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-apple-gray-5 uppercase tracking-wide">{h}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-apple-gray-2/60">
               {payments.map(p=>(
                 <tr key={p.id} className={`hover:bg-apple-gray/40 ${p.status==='overdue'?'bg-red-50/30':''}`}>
                   <td className="px-4 py-3"><div className="font-medium text-apple-text">{p.student_name}</div><div className="text-xs text-apple-gray-4">{p.description||'—'}</div></td>
                   <td className="px-4 py-3 font-semibold">{currency}{p.amount}</td>
-                  <td className="px-4 py-3 text-apple-gray-5">
-                    {new Date(p.due_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-apple-text text-sm">{monthLabel(p.due_date)}</div>
                     {p.paid_date&&<div className="text-xs text-apple-green">Paid {new Date(p.paid_date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</div>}
-                    {p.payment_method&&<div className="text-xs text-apple-gray-4">{p.payment_method}</div>}
                   </td>
+                  <td className="px-4 py-3">{typeBadge(p.payment_method)}</td>
                   <td className="px-4 py-3">{badge(p.status)}</td>
                   <td className="px-4 py-3 text-xs text-apple-gray-4">{p.reminder_count>0?`${p.reminder_count} sent`:'—'}</td>
                   <td className="px-4 py-3">
@@ -321,10 +335,10 @@ export default function Payments() {
               <div><div className="font-semibold text-apple-text">{p.student_name}</div><div className="text-xs text-apple-gray-4 mt-0.5">{p.description||'—'}</div></div>
               <div className="text-right"><div className="font-bold text-lg text-apple-text">{currency}{p.amount}</div>{badge(p.status)}</div>
             </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-apple-gray-5">
-              <span>Due: <span className="text-apple-text font-medium">{new Date(p.due_date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</span></span>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-apple-gray-5 items-center">
+              <span>Month: <span className="text-apple-text font-medium">{monthLabel(p.due_date)}</span></span>
               {p.paid_date&&<span>Paid: <span className="text-apple-green font-medium">{new Date(p.paid_date).toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</span></span>}
-              {p.payment_method&&<span>{p.payment_method}</span>}
+              {p.payment_method&&typeBadge(p.payment_method)}
               {p.reminder_count>0&&<span className="text-apple-blue">{p.reminder_count} reminder{p.reminder_count>1?'s':''}</span>}
             </div>
             {p.status!=='paid'&&(
