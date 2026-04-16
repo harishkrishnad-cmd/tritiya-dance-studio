@@ -144,10 +144,18 @@ router.put('/:id', (req, res) => {
   res.json(db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id));
 });
 
-// Delete (soft) — set both active=0 AND status='left' so the list query
-// (which filters by status, not active) actually removes them from the default view
+// Delete — soft for active students (moves to Left tab), hard for already-left/inactive students
 router.delete('/:id', (req, res) => {
-  db.prepare("UPDATE students SET active = 0, status = 'left' WHERE id = ?").run(req.params.id);
+  const student = db.prepare('SELECT status FROM students WHERE id = ?').get(req.params.id);
+  if (!student) return res.status(404).json({ error: 'Not found' });
+  if (student.status === 'left' || student.status === 'inactive') {
+    // Permanently remove — null out payment student_id so payment history isn't lost
+    db.prepare('UPDATE payments SET student_id = NULL WHERE student_id = ?').run(req.params.id);
+    db.prepare('DELETE FROM students WHERE id = ?').run(req.params.id);
+  } else {
+    // Soft delete — move to Left tab, keeps history intact
+    db.prepare("UPDATE students SET active = 0, status = 'left' WHERE id = ?").run(req.params.id);
+  }
   res.json({ success: true });
 });
 

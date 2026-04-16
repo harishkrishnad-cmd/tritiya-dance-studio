@@ -217,10 +217,6 @@ export default function Landing() {
               onMouseEnter={e => e.target.style.color=T.navLinkHover} onMouseLeave={e => e.target.style.color=T.navLink}>
               Parent Portal
             </a>
-            <a href="/enroll" style={{ fontSize: 13, fontWeight: 500, color: '#0071e3', background: 'rgba(0,113,227,0.12)', padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'background 0.2s', border: '1px solid rgba(0,113,227,0.3)' }}
-              onMouseEnter={e => e.currentTarget.style.background='rgba(0,113,227,0.22)'} onMouseLeave={e => e.currentTarget.style.background='rgba(0,113,227,0.12)'}>
-              Enroll Now
-            </a>
             <a href="/student" style={{ fontSize: 13, fontWeight: 500, color: T.navBtnText, background: T.navBtnBg, padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'opacity 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
               Student Portal
@@ -250,7 +246,6 @@ export default function Landing() {
               </button>
             ))}
             <a href="/parent" style={{ color: T.text, fontSize: 17, textDecoration: 'none', padding: '10px 0' }}>Parent Portal</a>
-            <a href="/enroll" style={{ color: '#0071e3', background: 'rgba(0,113,227,0.1)', fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 4, display: 'inline-block', width: 'fit-content', border: '1px solid rgba(0,113,227,0.3)' }}>Enroll Now →</a>
             <a href="/student" style={{ color: T.navBtnText, background: T.navBtnBg, fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 8, display: 'inline-block', width: 'fit-content' }}>Student Portal</a>
           </div>
         )}
@@ -266,21 +261,16 @@ export default function Landing() {
             {nl(s('hero_title', data))}
           </h1>
           <p style={{ fontSize: 'clamp(16px, 2.5vw, 21px)', fontWeight: 300, color: 'rgba(245,245,247,0.7)', letterSpacing: '-0.01em', marginBottom: 40, lineHeight: 1.5 }}>{s('hero_subtitle', data)}</p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center' }}>
             <a href="/enroll"
-              style={{ padding: '14px 28px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: '#0071e3', color: '#fff', border: 'none', cursor: 'pointer', transition: 'opacity 0.2s', textDecoration: 'none' }}
+              style={{ padding: '15px 32px', borderRadius: 980, fontSize: 15, fontWeight: 600, background: '#0071e3', color: '#fff', textDecoration: 'none', transition: 'opacity 0.2s', letterSpacing: '-0.01em' }}
               onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
               Enroll Now
             </a>
             <button onClick={() => scrollTo('programs')}
-              style={{ padding: '14px 28px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: '#f5f5f7', color: '#0a0a0a', border: 'none', cursor: 'pointer', transition: 'opacity 0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+              style={{ padding: '15px 32px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: 'rgba(245,245,247,0.15)', color: '#f5f5f7', border: '1px solid rgba(245,245,247,0.3)', cursor: 'pointer', backdropFilter: 'blur(10px)', transition: 'background 0.2s', letterSpacing: '-0.01em' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(245,245,247,0.24)'} onMouseLeave={e => e.currentTarget.style.background='rgba(245,245,247,0.15)'}>
               {s('hero_cta1', data)}
-            </button>
-            <button onClick={() => scrollTo('contact')}
-              style={{ padding: '14px 28px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: 'rgba(245,245,247,0.12)', color: '#f5f5f7', border: '1px solid rgba(245,245,247,0.25)', cursor: 'pointer', backdropFilter: 'blur(10px)', transition: 'background 0.2s' }}
-              onMouseEnter={e => e.currentTarget.style.background='rgba(245,245,247,0.2)'} onMouseLeave={e => e.currentTarget.style.background='rgba(245,245,247,0.12)'}>
-              {s('hero_cta2', data)}
             </button>
           </div>
         </div>
