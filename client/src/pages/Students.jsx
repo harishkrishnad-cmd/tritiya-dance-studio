@@ -246,6 +246,15 @@ export default function Students() {
     setActivating(null);
   }
 
+  async function declineStudent(id, name) {
+    if (!confirm(`Remove ${name} from the system? This will delete their pending enrollment.`)) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      await fetch(`/api/students/${id}/decline`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      loadPending();
+    } catch { alert('Could not decline student'); }
+  }
+
   async function loadEnrollLinks() {
     setEnrollLoading(true);
     try {
@@ -272,8 +281,12 @@ export default function Students() {
   async function handleSave() {
     if (!form.name.trim()) return alert('Student name is required');
     setSaving(true);
-    try { editing ? await api.updateStudent(editing.id,form) : await api.createStudent(form); setModalOpen(false); load(); }
-    finally { setSaving(false); }
+    try {
+      editing ? await api.updateStudent(editing.id, form) : await api.createStudent(form);
+      setModalOpen(false); load();
+    } catch (err) {
+      alert(err.message || 'Could not save student');
+    } finally { setSaving(false); }
   }
   async function handleDelete(s) {
     if (!confirm(`Remove ${s.name}? They will be marked as left and removed from the active list.`)) return;
@@ -316,15 +329,21 @@ export default function Students() {
           <div className="space-y-2">
             {pending.map(s => (
               <div key={s.id} className="flex items-center justify-between gap-3 bg-white rounded-apple-sm border border-amber-100 px-3 py-2.5">
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm font-medium text-apple-text">{s.name}</p>
                   <p className="text-xs text-apple-gray-4">{s.level} · {s.parent_name} · {s.parent_email}</p>
                   <p className="text-xs text-apple-gray-4">{s.created_at ? new Date(s.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</p>
                 </div>
-                <button onClick={() => activateStudent(s.id)} disabled={activating === s.id}
-                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-apple-sm hover:bg-green-700 disabled:opacity-60">
-                  {activating === s.id ? '…' : '✓ Yes, Paid — Activate'}
-                </button>
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => declineStudent(s.id, s.name)}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-white border border-red-200 text-red-600 text-xs font-semibold rounded-apple-sm hover:bg-red-50">
+                    ✕ No
+                  </button>
+                  <button onClick={() => activateStudent(s.id)} disabled={activating === s.id}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-apple-sm hover:bg-green-700 disabled:opacity-60">
+                    {activating === s.id ? '…' : '✓ Yes, Paid — Activate'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -8,7 +8,7 @@ router.get('/', (req, res) => {
   const { student_id, status, month, year } = req.query;
   let query = `
     SELECT p.*, s.name as student_name, s.parent_name, s.parent_email
-    FROM payments p JOIN students s ON s.id = p.student_id WHERE 1=1
+    FROM payments p LEFT JOIN students s ON s.id = p.student_id WHERE 1=1
   `;
   const params = [];
   if (student_id) { query += ` AND p.student_id = ?`; params.push(student_id); }

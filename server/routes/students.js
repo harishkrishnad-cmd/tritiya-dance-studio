@@ -49,6 +49,10 @@ router.post('/', async (req, res) => {
   const { name, date_of_birth, level, enrollment_date, parent_name, parent_email,
     parent_phone, emergency_contact, address, monthly_fee, notes, parent_username, parent_password, student_email, status } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
+  if (parent_email) {
+    const dup = db.prepare("SELECT id FROM students WHERE parent_email=? AND active=1").get(parent_email.trim().toLowerCase());
+    if (dup) return res.status(400).json({ error: 'A student with this parent email already exists.' });
+  }
 
   // Auto-generate parent login if not provided
   const username = parent_username || (name.toLowerCase().replace(/\s+/g, '.') + Math.floor(Math.random() * 100));
@@ -219,7 +223,13 @@ router.post('/:id/deactivate', (req, res) => {
 
 // ── Get pending activations ───────────────────────────────────
 router.get('/pending/activations', (req, res) => {
-  res.json(db.prepare("SELECT * FROM students WHERE account_active=0 ORDER BY created_at DESC").all());
+  res.json(db.prepare("SELECT * FROM students WHERE account_active=0 AND active=1 AND status='active' ORDER BY created_at DESC").all());
+});
+
+// ── Decline / reject a pending activation (remove from system) ─
+router.delete('/:id/decline', (req, res) => {
+  db.prepare("UPDATE students SET active=0, status='left' WHERE id=?").run(req.params.id);
+  res.json({ success: true });
 });
 
 // Reset parent password

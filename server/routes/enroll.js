@@ -54,6 +54,11 @@ router.post('/submit/:token', async (req, res) => {
   if (!student_name || !parent_name || !parent_email) {
     return res.status(400).json({ error: 'Student name, parent name and email are required' });
   }
+  // Check for duplicate email
+  const emailLower = parent_email.trim().toLowerCase();
+  const existingEmail = db.prepare("SELECT id FROM students WHERE parent_email=? AND active=1").get(emailLower);
+  if (existingEmail) return res.status(400).json({ error: 'An account with this email already exists. Please contact the studio or use the parent login.' });
+
   // If paid via Razorpay, activate immediately — no teacher confirmation needed
   const autoActivate = razorpay_paid === true ? 1 : 0;
 
@@ -69,7 +74,8 @@ router.post('/submit/:token', async (req, res) => {
 
   try {
     // Use fee_amount from settings as default monthly fee
-    const defaultFee = parseFloat(settings.fee_amount || '1000');
+    const s = db.prepare('SELECT key, value FROM settings').all().reduce((a, { key, value }) => ({ ...a, [key]: value }), {});
+    const defaultFee = parseFloat(s.fee_amount || '1000');
 
     const result = db.prepare(`
       INSERT INTO students (name, date_of_birth, level, parent_name, parent_email, parent_phone, address, notes,
