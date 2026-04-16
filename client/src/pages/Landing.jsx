@@ -217,8 +217,12 @@ export default function Landing() {
               onMouseEnter={e => e.target.style.color=T.navLinkHover} onMouseLeave={e => e.target.style.color=T.navLink}>
               Parent Portal
             </a>
+            <a href="/enroll" style={{ fontSize: 13, fontWeight: 500, color: '#0071e3', background: 'rgba(0,113,227,0.12)', padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'background 0.2s', border: '1px solid rgba(0,113,227,0.3)' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(0,113,227,0.22)'} onMouseLeave={e => e.currentTarget.style.background='rgba(0,113,227,0.12)'}>
+              Enroll Now
+            </a>
             <a href="/student" style={{ fontSize: 13, fontWeight: 500, color: T.navBtnText, background: T.navBtnBg, padding: '7px 16px', borderRadius: 980, textDecoration: 'none', transition: 'opacity 0.2s' }}
-              onMouseEnter={e => e.target.style.opacity='0.85'} onMouseLeave={e => e.target.style.opacity='1'}>
+              onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
               Student Portal
             </a>
             <button onClick={toggleTheme} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -246,6 +250,7 @@ export default function Landing() {
               </button>
             ))}
             <a href="/parent" style={{ color: T.text, fontSize: 17, textDecoration: 'none', padding: '10px 0' }}>Parent Portal</a>
+            <a href="/enroll" style={{ color: '#0071e3', background: 'rgba(0,113,227,0.1)', fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 4, display: 'inline-block', width: 'fit-content', border: '1px solid rgba(0,113,227,0.3)' }}>Enroll Now →</a>
             <a href="/student" style={{ color: T.navBtnText, background: T.navBtnBg, fontSize: 15, fontWeight: 500, textDecoration: 'none', padding: '10px 20px', borderRadius: 980, marginTop: 8, display: 'inline-block', width: 'fit-content' }}>Student Portal</a>
           </div>
         )}
@@ -262,6 +267,11 @@ export default function Landing() {
           </h1>
           <p style={{ fontSize: 'clamp(16px, 2.5vw, 21px)', fontWeight: 300, color: 'rgba(245,245,247,0.7)', letterSpacing: '-0.01em', marginBottom: 40, lineHeight: 1.5 }}>{s('hero_subtitle', data)}</p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="/enroll"
+              style={{ padding: '14px 28px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: '#0071e3', color: '#fff', border: 'none', cursor: 'pointer', transition: 'opacity 0.2s', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+              Enroll Now
+            </a>
             <button onClick={() => scrollTo('programs')}
               style={{ padding: '14px 28px', borderRadius: 980, fontSize: 15, fontWeight: 500, background: '#f5f5f7', color: '#0a0a0a', border: 'none', cursor: 'pointer', transition: 'opacity 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
@@ -509,20 +519,34 @@ export default function Landing() {
       </section>
 
       {/* ── PORTAL CTA ── */}
-      <section style={{ margin: '0 max(24px, calc((100vw - 1100px)/2)) clamp(60px, 8vw, 100px)', borderRadius: 24, overflow: 'hidden', position: 'relative', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', padding: 'clamp(40px, 6vw, 72px) clamp(32px, 6vw, 72px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32 }}>
-        <div>
-          <h3 style={{ fontSize: 'clamp(22px, 3.5vw, 36px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7', marginBottom: 12 }}>Already enrolled?</h3>
-          <p style={{ fontSize: 16, color: 'rgba(245,245,247,0.55)', fontWeight: 300, maxWidth: 440 }}>Parents can view attendance, upcoming classes, and fee status. Instructors can manage the full studio from one place.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <a href="/parent" style={{ padding: '13px 26px', borderRadius: 980, fontSize: 14, fontWeight: 500, background: 'rgba(245,245,247,0.1)', color: '#f5f5f7', border: '1px solid rgba(245,245,247,0.2)', textDecoration: 'none', transition: 'background 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.background='rgba(245,245,247,0.18)'} onMouseLeave={e => e.currentTarget.style.background='rgba(245,245,247,0.1)'}>
-            Parent Portal
-          </a>
-          <a href="/student" style={{ padding: '13px 26px', borderRadius: 980, fontSize: 14, fontWeight: 500, background: '#f5f5f7', color: '#0a0a0a', textDecoration: 'none', transition: 'opacity 0.2s' }}
+      <section style={{ margin: '0 max(24px, calc((100vw - 1100px)/2)) clamp(60px, 8vw, 100px)', borderRadius: 24, overflow: 'hidden', position: 'relative', background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)', padding: 'clamp(40px, 6vw, 72px) clamp(32px, 6vw, 72px)', display: 'flex', flexDirection: 'column', gap: 40 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 10 }}>New Student</p>
+            <h3 style={{ fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7', marginBottom: 10 }}>Ready to join us?</h3>
+            <p style={{ fontSize: 15, color: 'rgba(245,245,247,0.5)', fontWeight: 300, maxWidth: 380 }}>Register your child online in minutes. Fill in your details, choose a program, and you're all set.</p>
+          </div>
+          <a href="/enroll" style={{ padding: '14px 30px', borderRadius: 980, fontSize: 15, fontWeight: 600, background: '#0071e3', color: '#fff', textDecoration: 'none', transition: 'opacity 0.2s', flexShrink: 0 }}
             onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-            Student Portal
+            Enroll Now →
           </a>
+        </div>
+        <div style={{ borderTop: '1px solid rgba(245,245,247,0.1)', paddingTop: 32, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 24 }}>
+          <div>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.18em', color: 'rgba(245,245,247,0.4)', textTransform: 'uppercase', marginBottom: 10 }}>Already Enrolled</p>
+            <h3 style={{ fontSize: 'clamp(20px, 3vw, 30px)', fontWeight: 700, letterSpacing: '-0.03em', color: '#f5f5f7', marginBottom: 10 }}>Access your portal</h3>
+            <p style={{ fontSize: 15, color: 'rgba(245,245,247,0.55)', fontWeight: 300, maxWidth: 380 }}>Parents can view attendance, fees, and upcoming classes. Students access the Learning Hub.</p>
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            <a href="/parent" style={{ padding: '13px 26px', borderRadius: 980, fontSize: 14, fontWeight: 500, background: 'rgba(245,245,247,0.1)', color: '#f5f5f7', border: '1px solid rgba(245,245,247,0.2)', textDecoration: 'none', transition: 'background 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(245,245,247,0.18)'} onMouseLeave={e => e.currentTarget.style.background='rgba(245,245,247,0.1)'}>
+              Parent Portal
+            </a>
+            <a href="/student" style={{ padding: '13px 26px', borderRadius: 980, fontSize: 14, fontWeight: 500, background: '#f5f5f7', color: '#0a0a0a', textDecoration: 'none', transition: 'opacity 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.opacity='0.88'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+              Student Portal
+            </a>
+          </div>
         </div>
       </section>
 
@@ -536,6 +560,7 @@ export default function Landing() {
           <p style={{ fontSize: 12, color: T.footerSubtext }}>© {new Date().getFullYear()} Tritiya Dance Studio · {s('about_badge_name', data)}</p>
           <div style={{ display: 'flex', gap: 24 }}>
             <a href={`tel:${s('contact_phone',data)}`} style={{ fontSize: 12, color: T.footerText, textDecoration: 'none' }}>{s('contact_phone',data)}</a>
+            <a href="/enroll" style={{ fontSize: 12, color: '#0071e3', textDecoration: 'none', fontWeight: 500 }}>Enroll</a>
             <a href="/parent" style={{ fontSize: 12, color: T.footerText, textDecoration: 'none' }}>Parent Portal</a>
             <a href="/student" style={{ fontSize: 12, color: T.footerText, textDecoration: 'none' }}>Student Portal</a>
           </div>

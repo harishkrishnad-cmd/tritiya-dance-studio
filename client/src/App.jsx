@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
@@ -20,6 +20,14 @@ import EnrollPage from './pages/EnrollPage';
 import SignupPage from './pages/SignupPage';
 import InstallPrompt from './components/InstallPrompt';
 import { api } from './api';
+
+function EnrollDefault() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    fetch('/api/enroll/default').then(r => r.json()).then(d => navigate(`/enroll/${d.token}`, { replace: true })).catch(() => {});
+  }, []);
+  return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'100vh', fontFamily:'system-ui', color:'#6e6e73' }}>Loading enrollment form…</div>;
+}
 
 function parseToken(token) {
   try { return JSON.parse(atob(token.split('.')[0])); }
@@ -75,7 +83,10 @@ export default function App() {
     );
   }
 
-  // Enrollment form (public)
+  // Enrollment form (public) — /enroll redirects to permanent default token
+  if (location.pathname === '/enroll') {
+    return <EnrollDefault />;
+  }
   if (location.pathname.startsWith('/enroll/')) {
     return <Routes><Route path="/enroll/:token" element={<EnrollPage />} /></Routes>;
   }

@@ -414,14 +414,34 @@ export default function Students() {
 
       <Modal isOpen={enrollModal} onClose={() => setEnrollModal(false)} title="Enrollment Links" size="md">
         <div className="space-y-4">
-          <p className="text-sm text-apple-gray-5">Share a link with parents to self-enroll their child. The form collects all details and adds the student to your system automatically.</p>
-          <div className="flex gap-2">
-            <input className="input flex-1" placeholder="Label (e.g. Batch 2025)" value={newLinkLabel} onChange={e => setNewLinkLabel(e.target.value)} />
-            <button onClick={createEnrollLink} className="btn-primary whitespace-nowrap">+ Create Link</button>
+          {/* Permanent public link — always works, no need to regenerate */}
+          <div className="bg-apple-blue-light border border-apple-blue/20 rounded-apple p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-semibold text-apple-blue uppercase tracking-wide">Permanent Public Link</span>
+              <span className="text-xs bg-apple-blue text-white px-1.5 py-0.5 rounded-full font-medium">Always Active</span>
+            </div>
+            <p className="text-xs text-apple-gray-5 mb-3">Share this link anywhere — website, WhatsApp, social media. It never expires.</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-white border border-apple-gray-2 rounded-apple-sm px-3 py-2 text-apple-text font-mono truncate">{window.location.origin}/enroll</code>
+              <button onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/enroll`); }} className="btn-primary text-xs px-3 py-2 whitespace-nowrap">Copy</button>
+            </div>
+            <div className="mt-3">
+              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(`${window.location.origin}/enroll`)}`} alt="QR" className="w-28 h-28 rounded border border-apple-gray-2" />
+            </div>
           </div>
+
+          <div className="border-t border-apple-gray-2 pt-3">
+            <p className="text-xs font-semibold text-apple-gray-5 uppercase tracking-wide mb-2">Custom Links (optional)</p>
+            <p className="text-xs text-apple-gray-4 mb-3">Create batch-specific links to track enrollments separately.</p>
+            <div className="flex gap-2">
+              <input className="input flex-1 text-sm" placeholder="Label (e.g. Batch 2025)" value={newLinkLabel} onChange={e => setNewLinkLabel(e.target.value)} />
+              <button onClick={createEnrollLink} className="btn-secondary whitespace-nowrap text-sm">+ Create</button>
+            </div>
+          </div>
+
           {enrollLoading ? <p className="text-sm text-apple-gray-5">Loading…</p> : (
             <div className="space-y-2">
-              {enrollLinks.filter(l => l.active).map(l => {
+              {enrollLinks.filter(l => l.active && l.label !== '__public__').map(l => {
                 const url = `${window.location.origin}/enroll/${l.token}`;
                 return (
                   <div key={l.id} className="bg-apple-gray rounded-apple-sm p-3">
@@ -439,9 +459,6 @@ export default function Students() {
                   </div>
                 );
               })}
-              {enrollLinks.filter(l => l.active).length === 0 && !enrollLoading && (
-                <p className="text-sm text-apple-gray-5 text-center py-4">No active enrollment links yet. Create one above.</p>
-              )}
             </div>
           )}
         </div>

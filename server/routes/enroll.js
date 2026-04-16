@@ -6,6 +6,18 @@ const { authMiddleware, adminOnly } = require('../middleware/auth');
 const { sendWelcomeEmail } = require('../services/emailService');
 const { hashPin } = require('./auth');
 
+// ── Public: get permanent default enrollment token ────────────
+// Creates one if it doesn't exist yet — safe to call repeatedly
+router.get('/default', (req, res) => {
+  let link = db.prepare("SELECT * FROM enrollment_links WHERE label='__public__' AND active=1 LIMIT 1").get();
+  if (!link) {
+    const token = crypto.randomBytes(16).toString('hex');
+    const r = db.prepare("INSERT INTO enrollment_links (token, label) VALUES (?, '__public__')").run(token);
+    link = db.prepare('SELECT * FROM enrollment_links WHERE id=?').get(r.lastInsertRowid);
+  }
+  res.json({ token: link.token });
+});
+
 // ── Admin: create enrollment link ─────────────────────────────
 router.post('/create-link', authMiddleware, adminOnly, (req, res) => {
   const { label } = req.body;
