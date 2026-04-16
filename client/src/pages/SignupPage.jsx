@@ -18,6 +18,9 @@ export default function SignupPage() {
   const [rzpPaying, setRzpPaying] = useState(false);
   const [rzpDone, setRzpDone] = useState(false);
   const [payMode, setPayMode] = useState('onetime');
+  const [rzpPaymentId, setRzpPaymentId] = useState('');
+  const [rzpOrderId, setRzpOrderId] = useState('');
+  const [rzpSubId, setRzpSubId] = useState('');
   const [form, setForm] = useState({
     student_name: '', date_of_birth: '', level: 'Beginner',
     parent_name: '', parent_email: '', parent_phone: '', address: '', notes: '',
@@ -71,8 +74,11 @@ export default function SignupPage() {
             }),
           });
           const ver = await verRes.json();
-          if (ver.success) { setRzpDone(true); setPaid(true); }
-          else setError(ver.error || 'Payment verification failed');
+          if (ver.success) {
+            setRzpDone(true); setPaid(true);
+            setRzpPaymentId(ver.razorpay_payment_id || response.razorpay_payment_id || '');
+            setRzpOrderId(response.razorpay_order_id || '');
+          } else setError(ver.error || 'Payment verification failed');
           setRzpPaying(false);
         },
         modal: { ondismiss: () => setRzpPaying(false) },
@@ -112,8 +118,11 @@ export default function SignupPage() {
             }),
           });
           const ver = await verRes.json();
-          if (ver.success) { setRzpDone(true); setPaid(true); }
-          else setError(ver.error || 'Subscription verification failed');
+          if (ver.success) {
+            setRzpDone(true); setPaid(true);
+            setRzpPaymentId(ver.razorpay_payment_id || response.razorpay_payment_id || '');
+            setRzpSubId(ver.razorpay_subscription_id || response.razorpay_subscription_id || '');
+          } else setError(ver.error || 'Subscription verification failed');
           setRzpPaying(false);
         },
         modal: { ondismiss: () => setRzpPaying(false) },
@@ -132,7 +141,13 @@ export default function SignupPage() {
     try {
       const res = await fetch(`/api/enroll/submit/${token}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, razorpay_paid: rzpDone }),
+        body: JSON.stringify({
+          ...form,
+          razorpay_paid: rzpDone,
+          razorpay_payment_id: rzpPaymentId || undefined,
+          razorpay_order_id: rzpOrderId || undefined,
+          razorpay_subscription_id: rzpSubId || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); setLoading(false); return; }

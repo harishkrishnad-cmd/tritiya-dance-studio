@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import { api } from '../api';
 
 const LEVELS = ['Beginner', 'Primary', 'Junior', 'Intermediate', 'Senior', 'Advanced'];
-const empty = { name:'', date_of_birth:'', level:'Beginner', enrollment_date:new Date().toISOString().split('T')[0], parent_name:'', parent_email:'', parent_phone:'', emergency_contact:'', address:'', monthly_fee:'', notes:'', student_email:'', status:'active' };
+const empty = { name:'', date_of_birth:'', level:'Beginner', enrollment_date:new Date().toISOString().split('T')[0], parent_name:'', parent_email:'', parent_phone:'', emergency_contact:'', address:'', monthly_fee:'1000', notes:'', student_email:'', status:'active' };
 
 function StudentForm({ data, onChange }) {
   return (
@@ -268,7 +268,7 @@ export default function Students() {
   }
 
   function openAdd() { setEditing(null); setForm(empty); setModalOpen(true); }
-  function openEdit(s) { setEditing(s); setForm({...empty,...s,monthly_fee:s.monthly_fee||'',status:s.status||'active'}); setModalOpen(true); }
+  function openEdit(s) { setEditing(s); setForm({...empty,...s,monthly_fee:s.monthly_fee??'1000',status:s.status||'active'}); setModalOpen(true); }
   async function handleSave() {
     if (!form.name.trim()) return alert('Student name is required');
     setSaving(true);

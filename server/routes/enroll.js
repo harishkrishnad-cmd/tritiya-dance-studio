@@ -49,7 +49,8 @@ router.post('/submit/:token', async (req, res) => {
   const link = db.prepare('SELECT * FROM enrollment_links WHERE token=? AND active=1').get(req.params.token);
   if (!link) return res.status(404).json({ error: 'Enrollment link is invalid or expired' });
 
-  const { student_name, date_of_birth, level, parent_name, parent_email, parent_phone, address, notes, razorpay_paid } = req.body;
+  const { student_name, date_of_birth, level, parent_name, parent_email, parent_phone, address, notes,
+          razorpay_paid, razorpay_payment_id, razorpay_order_id, razorpay_subscription_id } = req.body;
   if (!student_name || !parent_name || !parent_email) {
     return res.status(400).json({ error: 'Student name, parent name and email are required' });
   }
@@ -67,21 +68,36 @@ router.post('/submit/:token', async (req, res) => {
   const studentPasswordHash = hashPin(studentPassword);
 
   try {
+    // Use fee_amount from settings as default monthly fee
+    const defaultFee = parseFloat(settings.fee_amount || '1000');
+
     const result = db.prepare(`
       INSERT INTO students (name, date_of_birth, level, parent_name, parent_email, parent_phone, address, notes,
         parent_username, parent_password_hash, parent_pin,
         student_username, student_password_hash, student_pin,
-        status, account_active)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
+        monthly_fee, status, account_active)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
     `).run(
       student_name.trim(), date_of_birth || null, level || 'Beginner',
       parent_name.trim(), parent_email.trim().toLowerCase(), parent_phone || null, address || null, notes || null,
       username, passwordHash, password,
       studentUsername, studentPasswordHash, studentPassword,
-      autoActivate
+      defaultFee, autoActivate
     );
 
     const student = db.prepare('SELECT * FROM students WHERE id=?').get(result.lastInsertRowid);
+    const newStudentId = result.lastInsertRowid;
+
+    // Link the Razorpay payment record to this new student
+    // The payment was recorded during verify (before student existed), so student_id was null
+    if (razorpay_payment_id) {
+      db.prepare("UPDATE payments SET student_id=? WHERE razorpay_payment_id=? AND (student_id IS NULL OR student_id=0)")
+        .run(newStudentId, razorpay_payment_id);
+    }
+    if (razorpay_subscription_id) {
+      db.prepare("UPDATE payments SET student_id=? WHERE razorpay_subscription_id=? AND (student_id IS NULL OR student_id=0)")
+        .run(newStudentId, razorpay_subscription_id);
+    }
 
     // Increment uses count
     db.prepare('UPDATE enrollment_links SET uses_count = uses_count + 1 WHERE id=?').run(link.id);
